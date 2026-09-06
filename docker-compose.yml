@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./skagata.db
+      - JWT_SECRET=dev-secret-change-me
+      - QR_TOKEN_SECRET=dev-qr-secret-change-me
+      - CORS_ORIGINS=http://localhost:5173
+      - SCHOOL_LATITUDE=-7.797068
+      - SCHOOL_LONGITUDE=110.370529
+      - MAX_ATTENDANCE_RADIUS_METERS=150
+      - PORT=8000
+    volumes:
+      - ./backend:/app
+
+  # Frontend is normally run with `npm run dev` locally (Vite has its own
+  # fast dev server with HMR), but a container is provided for convenience.
+  frontend:
+    image: node:20-slim
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+    depends_on:
+      - backend
