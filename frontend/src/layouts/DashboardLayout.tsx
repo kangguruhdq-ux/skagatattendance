@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import BottomNav from "../components/BottomNav";
+import SchoolLogo from "../components/SchoolLogo";
+import ThemeToggle from "../components/ThemeToggle";
 import clsx from "clsx";
 
 const STUDENT_NAV = [
@@ -38,10 +40,13 @@ const TEACHER_NAV = [
 
 const ADMIN_NAV = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
+  { to: "/admin/users", label: "Kelola Pengguna", icon: Users },
   { to: "/admin/students", label: "Data Siswa", icon: GraduationCap },
-  { to: "/admin/teachers", label: "Data Guru", icon: Users },
+  { to: "/admin/teachers", label: "Data Guru", icon: ShieldCheck },
   { to: "/admin/classes", label: "Kelas & Mapel", icon: BookOpen },
-  { to: "/admin/reports", label: "Laporan Presensi", icon: ClipboardList },
+  { to: "/admin/schedules", label: "Jadwal Pelajaran", icon: CalendarClock },
+  { to: "/admin/sessions", label: "Semua Sesi", icon: ClipboardList },
+  { to: "/admin/reports", label: "Laporan Presensi", icon: History },
 ];
 
 export default function DashboardLayout() {
@@ -66,9 +71,9 @@ export default function DashboardLayout() {
     : "SK";
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex w-64 flex-col border-r border-slate-800/80 bg-slate-950/90 backdrop-blur-xl px-4 py-6 fixed inset-y-0 z-30">
+      <aside className="hidden lg:flex w-64 flex-col border-r border-slate-200 dark:border-slate-800/80 bg-white/95 dark:bg-slate-950/90 backdrop-blur-xl px-4 py-6 fixed inset-y-0 z-30 shadow-sm dark:shadow-none">
         <SidebarContent
           nav={nav}
           fullName={fullName}
@@ -82,20 +87,15 @@ export default function DashboardLayout() {
       {drawerOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-sm transition-opacity"
             onClick={() => setDrawerOpen(false)}
             aria-hidden="true"
           />
-          <aside className="absolute inset-y-0 left-0 w-72 bg-slate-950 border-r border-slate-800 px-4 py-6 flex flex-col z-10 shadow-2xl">
+          <aside className="absolute inset-y-0 left-0 w-72 bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 px-4 py-6 flex flex-col z-10 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-brand-600/20 text-brand-400">
-                  <ShieldCheck size={20} />
-                </div>
-                <span className="font-extrabold text-white">SKAGATA</span>
-              </div>
+              <SchoolLogo size="sm" showName />
               <button
-                className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+                className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 onClick={() => setDrawerOpen(false)}
                 aria-label="Tutup menu"
               >
@@ -116,26 +116,49 @@ export default function DashboardLayout() {
 
       {/* Main content wrapper */}
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+        {/* Topbar (desktop) */}
+        <header className="hidden lg:flex items-center justify-between px-8 py-3.5 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-20">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              {role === "admin" ? "Admin Portal" : role === "teacher" ? "Portal Guru" : "Portal Siswa"}
+            </span>
+            <span className="text-slate-300 dark:text-slate-700">|</span>
+            <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+              SMK Negeri 3 Yogyakarta
+            </span>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <ThemeToggle showLabel />
+            <div className="h-5 w-px bg-slate-200 dark:bg-slate-800" />
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-brand-600/15 border border-brand-500/30 text-brand-700 dark:text-brand-300 text-xs font-bold flex items-center justify-center">
+                {initials}
+              </div>
+              <div className="text-left">
+                <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[160px]">{fullName}</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 capitalize">{role}</p>
+              </div>
+            </div>
+          </div>
+        </header>
+
         {/* Topbar (mobile) */}
-        <header className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md sticky top-0 z-30">
+        <header className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800/80 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md sticky top-0 z-30">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setDrawerOpen(true)}
               aria-label="Buka menu navigasi"
-              className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+              className="p-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             >
               <Menu size={22} />
             </button>
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-brand-600/20 text-brand-400">
-                <ShieldCheck size={18} />
-              </div>
-              <span className="font-bold text-white tracking-wide text-sm">SKAGATA</span>
-            </div>
+            <SchoolLogo size="sm" showName />
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-brand-600/30 border border-brand-500/40 text-brand-300 text-xs font-bold flex items-center justify-center">
+          <div className="flex items-center gap-2.5">
+            <ThemeToggle />
+            <div className="w-8 h-8 rounded-full bg-brand-600/20 border border-brand-500/40 text-brand-700 dark:text-brand-300 text-xs font-bold flex items-center justify-center">
               {initials}
             </div>
           </div>
@@ -170,16 +193,8 @@ function SidebarContent({
 }) {
   return (
     <>
-      <div className="flex items-center gap-3 px-2 mb-7">
-        <div className="p-2.5 rounded-xl bg-brand-600/20 text-brand-400 shadow-glow border border-brand-500/20">
-          <ShieldCheck size={22} />
-        </div>
-        <div>
-          <p className="font-black text-white text-base tracking-wider leading-none">SKAGATA</p>
-          <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest mt-1">
-            Smart Attendance
-          </p>
-        </div>
+      <div className="px-2 mb-7">
+        <SchoolLogo size="md" showName />
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto pr-1">
@@ -195,8 +210,8 @@ function SidebarContent({
                 clsx(
                   "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150",
                   isActive
-                    ? "bg-brand-600/20 text-brand-300 border border-brand-500/30 shadow-sm"
-                    : "text-slate-400 hover:text-white hover:bg-slate-800/70"
+                    ? "bg-brand-600/15 text-brand-700 dark:text-brand-300 border border-brand-500/30 shadow-sm font-semibold"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/70"
                 )
               }
             >
@@ -208,21 +223,21 @@ function SidebarContent({
       </nav>
 
       {/* User profile footer */}
-      <div className="border-t border-slate-800/80 pt-4 mt-4">
+      <div className="border-t border-slate-200 dark:border-slate-800/80 pt-4 mt-4">
         <div className="flex items-center gap-3 px-2 mb-3">
-          <div className="w-9 h-9 rounded-xl bg-brand-600/30 border border-brand-500/40 text-brand-300 font-bold text-xs flex items-center justify-center shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-brand-600/20 border border-brand-500/40 text-brand-700 dark:text-brand-300 font-bold text-xs flex items-center justify-center shrink-0">
             {initials}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-white truncate leading-tight">{fullName}</p>
-            <span className="inline-block px-2 py-0.5 mt-0.5 rounded-full bg-slate-800 border border-slate-700 text-[10px] text-slate-300 uppercase font-medium">
+            <p className="text-sm font-semibold text-slate-900 dark:text-white truncate leading-tight">{fullName}</p>
+            <span className="inline-block px-2 py-0.5 mt-0.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[10px] text-slate-600 dark:text-slate-300 uppercase font-medium">
               {role}
             </span>
           </div>
         </div>
         <button
           onClick={onLogout}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 font-medium transition-colors"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-500/10 font-medium transition-colors"
         >
           <LogOut size={16} /> Keluar (Logout)
         </button>

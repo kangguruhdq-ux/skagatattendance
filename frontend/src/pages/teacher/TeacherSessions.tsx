@@ -7,14 +7,17 @@ import {
   Clock,
   ArrowRight,
   AlertCircle,
+  AlertTriangle,
   Search,
+  Trash2,
 } from "lucide-react";
-import { getMySessions } from "../../api/teacherService";
+import { getMySessions, cancelTeacherSession } from "../../api/teacherService";
 import { ApiRequestError } from "../../api/client";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import StatusBadge from "../../components/StatusBadge";
 import { Skeleton } from "../../components/ui/Skeleton";
+import { Modal } from "../../components/ui/Modal";
 
 type StatusFilter = "all" | "active" | "not_started" | "expired";
 
@@ -24,13 +27,39 @@ export default function TeacherSessions() {
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    getMySessions()
+  // Delete modal state
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  function loadSessions() {
+    return getMySessions()
       .then((res) => setSessions(res.sessions || []))
       .catch((e) =>
         setError(e instanceof ApiRequestError ? e.friendlyMessage : "Gagal memuat daftar sesi.")
       );
+  }
+
+  useEffect(() => {
+    loadSessions();
   }, []);
+
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      await cancelTeacherSession(deleteTarget.id);
+      setDeleteTarget(null);
+      await loadSessions();
+    } catch (err) {
+      setDeleteError(
+        err instanceof ApiRequestError ? err.friendlyMessage : "Gagal menghapus sesi presensi."
+      );
+    } finally {
+      setDeleteLoading(false);
+    }
+  }
 
   const filteredSessions = useMemo(() => {
     if (!sessions) return [];
@@ -175,12 +204,88 @@ export default function TeacherSessions() {
                       {isActive ? "Buka Live Monitor" : "Lihat Rekap"}
                     </Button>
                   </Link>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => {
+                      setDeleteError(null);
+                      setDeleteTarget(s);
+                    }}
+                    title="Hapus Sesi Presensi"
+                    leftIcon={<Trash2 size={14} />}
+                  >
+                    Hapus
+                  </Button>
                 </div>
               </div>
             );
           })}
         </div>
       )}
+
+      {/* Modal Konfirmasi Hapus Sesi */}
+      <Modal
+        isOpen={Boolean(deleteTarget)}
+        onClose={() => {
+          if (!deleteLoading) {
+            setDeleteTarget(null);
+            setDeleteError(null);
+          }
+        }}
+        title="Hapus Sesi Presensi"
+        description="Konfirmasi penghapusan sesi presensi"
+        size="sm"
+      >
+        {deleteTarget && (
+          <div className="space-y-4">
+            <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3.5 text-xs text-amber-300 flex items-start gap-2.5">
+              <AlertTriangle className="text-amber-400 shrink-0 mt-0.5" size={16} />
+              <div>
+                <span className="font-semibold text-amber-200 block mb-1">Peringatan:</span>
+                Apakah Anda yakin ingin menghapus sesi <strong className="text-white">{deleteTarget.subject}</strong> kelas{" "}
+                <strong className="text-white">{deleteTarget.class_name}</strong> tanggal <strong className="text-white">{deleteTarget.date}</strong> ({deleteTarget.start_time} - {deleteTarget.end_time} WIB)?
+                <span className="block mt-1 text-slate-400">
+                  Sesi akan dihapus dari daftar presensi. Histori presensi siswa yang sudah tersimpan tetap aman.
+                </span>
+              </div>
+            </div>
+
+            {deleteError && (
+              <div className="rounded-xl bg-rose-500/10 border border-rose-500/30 p-3 text-xs text-rose-300 flex items-center gap-2">
+                <AlertCircle size={15} className="shrink-0 text-rose-400" />
+                <span>{deleteError}</span>
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                fullWidth
+                disabled={deleteLoading}
+                onClick={() => {
+                  setDeleteTarget(null);
+                  setDeleteError(null);
+                }}
+              >
+                Batal
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="md"
+                fullWidth
+                isLoading={deleteLoading}
+                onClick={handleConfirmDelete}
+                leftIcon={<Trash2 size={15} />}
+              >
+                Hapus Sesi
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

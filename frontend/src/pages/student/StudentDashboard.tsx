@@ -22,6 +22,7 @@ import { getStudentDashboard, getStudentActiveSessions } from "../../api/student
 import { getBiometricStatus } from "../../api/webauthnService";
 import type { StudentDashboard as StudentDashboardType, ActiveSessionItem } from "../../types";
 import { ApiRequestError } from "../../api/client";
+import { formatWibTime } from "../../utils/date";
 import { Card, CardContent } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import StatusBadge from "../../components/StatusBadge";
@@ -274,6 +275,8 @@ export default function StudentDashboard() {
                       })
                     : "-"}{" "}
                   • Status: <span className="uppercase font-semibold text-emerald-300">{attendedTodaySession.checked_in_status}</span>
+                  Tercatat pukul {formatWibTime(attendedTodaySession.checked_in_at)} WIB • Status:{" "}
+                  <span className="uppercase font-semibold text-emerald-300">{attendedTodaySession.checked_in_status}</span>
                 </p>
               </div>
             </div>

@@ -36,7 +36,7 @@ export default function BottomNav() {
   return (
     <nav
       aria-label="Navigasi Bawah"
-      className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800/90 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+      className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800/90 shadow-lg pb-[max(0.5rem,env(safe-area-inset-bottom))]"
     >
       <div className="flex items-center justify-around px-2 py-1.5 max-w-lg mx-auto">
         {items.map((item) => {
@@ -50,8 +50,8 @@ export default function BottomNav() {
                 clsx(
                   "flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all duration-150 min-w-[56px] min-h-[48px]",
                   isActive
-                    ? "text-brand-400 font-semibold"
-                    : "text-slate-400 hover:text-slate-200"
+                    ? "text-brand-600 dark:text-brand-400 font-semibold"
+                    : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
                 )
               }
             >
@@ -60,7 +60,7 @@ export default function BottomNav() {
                   <div
                     className={clsx(
                       "p-1 rounded-lg transition-all",
-                      isActive ? "bg-brand-500/20 text-brand-300" : "text-slate-400"
+                      isActive ? "bg-brand-500/20 text-brand-600 dark:text-brand-300" : "text-slate-500 dark:text-slate-400"
                     )}
                   >
                     <Icon size={20} />

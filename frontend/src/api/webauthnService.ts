@@ -1,5 +1,18 @@
 import { client, apiCall } from "./client";
 
+export interface BiometricDevice {
+  id: number;
+  credential_id: string;
+  label: string;
+  created_at: string;
+}
+
+export interface BiometricStatus {
+  enrolled: boolean;
+  rp_id: string;
+  devices: BiometricDevice[];
+}
+
 export function isBiometricSupported(): boolean {
   return typeof window !== "undefined" && !!window.PublicKeyCredential;
 }
@@ -21,7 +34,7 @@ function bufferToBase64url(buffer: ArrayBuffer): string {
 }
 
 export function getBiometricStatus() {
-  return apiCall<{ enrolled: boolean; devices: { id: number; label: string; created_at: string }[] }>(
+  return apiCall<BiometricStatus>(
     client.get("/api/biometric/status")
   );
 }
@@ -58,6 +71,52 @@ export async function enrollBiometric(deviceLabel: string): Promise<void> {
         attestationObject: bufferToBase64url(response.attestationObject),
       },
     })
+  );
+}
+
+/** Re-link biometric when domain/RP ID has changed. Registers a new credential
+ * without excluding existing ones, allowing the browser to create a fresh passkey
+ * bound to the current origin. */
+export async function relinkBiometric(deviceLabel: string): Promise<void> {
+  const options = await apiCall<any>(
+    client.post("/api/biometric/register/options?relink=true")
+  );
+
+  const publicKey: CredentialCreationOptions["publicKey"] = {
+    ...options,
+    challenge: base64urlToBuffer(options.challenge),
+    user: {
+      ...options.user,
+      id: base64urlToBuffer(options.user.id),
+    },
+    excludeCredentials: (options.excludeCredentials || []).map((c: any) => ({
+      ...c,
+      id: base64urlToBuffer(c.id),
+    })),
+  };
+
+  const credential = (await navigator.credentials.create({ publicKey })) as PublicKeyCredential;
+  if (!credential) throw new Error("Biometric re-link was cancelled.");
+
+  const response = credential.response as AuthenticatorAttestationResponse;
+
+  await apiCall(
+    client.post("/api/biometric/register/verify", {
+      id: credential.id,
+      type: credential.type,
+      device_label: deviceLabel,
+      response: {
+        clientDataJSON: bufferToBase64url(response.clientDataJSON),
+        attestationObject: bufferToBase64url(response.attestationObject),
+      },
+    })
+  );
+}
+
+/** Delete a registered biometric device/credential. */
+export async function deleteBiometricDevice(deviceId: number): Promise<{ deleted: boolean; remaining_devices: number }> {
+  return apiCall<{ deleted: boolean; remaining_devices: number }>(
+    client.delete(`/api/biometric/device/${deviceId}`)
   );
 }
 

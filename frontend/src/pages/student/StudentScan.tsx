@@ -15,6 +15,7 @@ import {
   ShieldAlert,
   AlertCircle,
   Check,
+  Image as ImageIcon,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -24,6 +25,7 @@ import {
 } from "../../api/studentService";
 import { verifyBiometric } from "../../api/webauthnService";
 import { ApiRequestError } from "../../api/client";
+import { formatWibTime } from "../../utils/date";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import StatusBadge from "../../components/StatusBadge";
@@ -58,6 +60,8 @@ export default function StudentScan() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const GALLERY_SCANNER_ID = "qr-gallery-reader";
 
   const pendingRef = useRef<{
     token: string;
@@ -166,6 +170,42 @@ export default function StudentScan() {
   }
 
   // --------------------------------------------------
+  // GALLERY QR SCANNER
+  // --------------------------------------------------
+  function triggerGallerySelect() {
+    stopAllCameras();
+    fileInputRef.current?.click();
+  }
+
+  async function handleGalleryScan(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset file input value so selecting the same file again triggers onChange
+    e.target.value = "";
+
+    stopAllCameras();
+    setPhase("verifying");
+    setVerifyingMsg("Membaca kode QR dari gambar...");
+    setFailReason({ title: "Presensi Gagal", message: "" });
+
+    try {
+      const scanner = new Html5Qrcode(GALLERY_SCANNER_ID);
+      const decodedText = await scanner.scanFile(file, false);
+      await scanner.clear();
+      await handleToken(decodedText);
+    } catch (err: any) {
+      console.error("Gallery QR scan error:", err);
+      setFailReason({
+        title: "QR Code Tidak Ditemukan",
+        message:
+          "Tidak dapat mendeteksi kode QR pada gambar yang dipilih. Pastikan gambar memuat QR code presensi yang jelas, fokus, dan tidak terpotong.",
+      });
+      setPhase("failed");
+    }
+  }
+
+  // --------------------------------------------------
   // HANDLE DECODED QR TOKEN
   // --------------------------------------------------
   async function handleToken(token: string) {
@@ -208,10 +248,21 @@ export default function StudentScan() {
       try {
         biometricToken = await verifyBiometric();
       } catch (err: any) {
-        const msg =
-          err instanceof ApiRequestError
-            ? err.friendlyMessage
-            : "Verifikasi biometrik gagal. Pastikan perangkat Anda sudah didaftarkan.";
+        let msg = "Verifikasi biometrik gagal. Pastikan perangkat Anda sudah didaftarkan.";
+        if (err instanceof ApiRequestError) {
+          msg = err.friendlyMessage;
+        } else if (
+          err?.name === "NotFoundError" ||
+          err?.message?.toLowerCase().includes("no passkey") ||
+          err?.message?.toLowerCase().includes("credential")
+        ) {
+          msg =
+            "Tidak ditemukan passkey atau biometrik yang cocok untuk domain ini.\n\nHal ini biasanya terjadi jika domain aplikasi berganti (misalnya URL tunnel baru). Silakan buka menu 'Pendaftaran Biometrik' lalu pilih 'Tautkan Ulang Biometrik'.";
+        } else if (err?.name === "NotAllowedError") {
+          msg = "Verifikasi biometrik dibatalkan oleh pengguna atau waktu habis.";
+        } else if (err?.message) {
+          msg = err.message;
+        }
         setFailReason({ title: "Verifikasi Biometrik Gagal", message: msg });
         setPhase("failed");
         return;
@@ -465,12 +516,22 @@ export default function StudentScan() {
               Buka Kamera & Mulai Scan
             </Button>
 
+            <Button
+              variant="secondary"
+              size="lg"
+              fullWidth
+              onClick={triggerGallerySelect}
+              leftIcon={<ImageIcon size={18} className="text-brand-400" />}
+            >
+              Pilih QR dari Galeri
+            </Button>
+
             <Link to="/student/photo" className="block w-full">
               <Button
-                variant="secondary"
+                variant="ghost"
                 size="md"
                 fullWidth
-                leftIcon={<Camera size={16} className="text-emerald-400" />}
+                leftIcon={<Camera size={16} className="text-brand-400" />}
               >
                 Gunakan Metode "Absen dengan Foto"
               </Button>
@@ -499,6 +560,17 @@ export default function StudentScan() {
           </div>
 
           <p className="text-xs text-slate-400">Posisikan kode QR di dalam kotak pemindai.</p>
+
+          <div className="pt-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={triggerGallerySelect}
+              leftIcon={<ImageIcon size={14} className="text-brand-400" />}
+            >
+              Atau Pilih dari Galeri
+            </Button>
+          </div>
         </Card>
       )}
 
@@ -611,6 +683,7 @@ export default function StudentScan() {
                   hour: "2-digit",
                   minute: "2-digit",
                 })}
+                {formatWibTime(result.checked_in_at)} WIB
               </span>
             </div>
 
@@ -680,10 +753,29 @@ export default function StudentScan() {
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
-            <Button variant="secondary" fullWidth onClick={reset} leftIcon={<RotateCcw size={16} />}>
-              Coba Lagi
-            </Button>
+          <div className="flex flex-col gap-2.5 pt-2">
+            {failReason.title.toLowerCase().includes("biometrik") && (
+              <Link to="/student/biometric" className="w-full">
+                <Button variant="primary" fullWidth leftIcon={<Fingerprint size={16} />}>
+                  Buka Menu Pendaftaran Biometrik
+                </Button>
+              </Link>
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-2.5">
+              <Button variant="secondary" fullWidth onClick={reset} leftIcon={<RotateCcw size={16} />}>
+                Coba Lagi
+              </Button>
+              <Button
+                variant="secondary"
+                fullWidth
+                onClick={triggerGallerySelect}
+                leftIcon={<ImageIcon size={16} className="text-brand-400" />}
+              >
+                Pilih dari Galeri
+              </Button>
+            </div>
+
             <Link to="/student" className="w-full">
               <Button variant="outline" fullWidth>
                 Ke Dashboard
@@ -692,6 +784,16 @@ export default function StudentScan() {
           </div>
         </Card>
       )}
+
+      {/* Hidden elements for gallery QR scanning */}
+      <div id={GALLERY_SCANNER_ID} className="hidden" />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleGalleryScan}
+      />
     </div>
   );
 }

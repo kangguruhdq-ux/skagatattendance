@@ -44,6 +44,13 @@ class SessionStatusHint(str, enum.Enum):
     expired = "expired"
 
 
+class PhotoStatus(str, enum.Enum):
+    none = "none"
+    pending = "pending"
+    approved = "approved"
+    rejected = "rejected"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -106,6 +113,7 @@ class Subject(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(128), nullable=False)
     code = Column(String(32), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=True)
 
     schedules = relationship("Schedule", back_populates="subject")
 
@@ -121,6 +129,9 @@ class Schedule(Base):
     start_time = Column(String(5), nullable=False)  # "07:00"
     end_time = Column(String(5), nullable=False)    # "08:30"
     room = Column(String(32), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     school_class = relationship("SchoolClass", back_populates="schedules")
     subject = relationship("Subject", back_populates="schedules")
@@ -151,12 +162,17 @@ class AttendanceSession(Base):
     # and cannot be reconstructed without the server secret.
     nonce = Column(String(64), nullable=False)
 
+    room = Column(String(32), nullable=True)
+    schedule_id = Column(Integer, ForeignKey("schedules.id"), nullable=True)
+    is_deleted = Column(Boolean, default=False, nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
 
     subject = relationship("Subject")
     school_class = relationship("SchoolClass")
     teacher = relationship("Teacher", back_populates="sessions")
     records = relationship("AttendanceRecord", back_populates="session")
+    schedule = relationship("Schedule")
 
 
 class AttendanceRecord(Base):
@@ -183,13 +199,19 @@ class AttendanceRecord(Base):
     # Photo proof: a selfie/photo taken at the moment of check-in, stored on
     # disk (never in the DB itself). Path is relative to UPLOAD_DIR's parent.
     photo_path = Column(String(255), nullable=True)
+    photo_status = Column(Enum(PhotoStatus), default=PhotoStatus.none, nullable=True)
+    photo_reviewed_by = Column(Integer, ForeignKey("teachers.id"), nullable=True)
+    photo_reviewed_at = Column(DateTime, nullable=True)
+    photo_rejection_reason = Column(Text, nullable=True)
 
     # Whether a WebAuthn (fingerprint/Face ID) biometric check passed for
     # this specific check-in (see BiometricCredential below).
     biometric_verified = Column(Boolean, default=False)
+    is_deleted = Column(Boolean, default=False, nullable=True)
 
     student = relationship("Student", back_populates="attendance_records")
     session = relationship("AttendanceSession", back_populates="records")
+    photo_reviewer = relationship("Teacher", foreign_keys=[photo_reviewed_by])
 
 
 class BiometricCredential(Base):

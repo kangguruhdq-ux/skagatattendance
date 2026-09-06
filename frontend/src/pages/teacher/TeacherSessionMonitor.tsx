@@ -24,8 +24,11 @@ import {
   getSessionRecords,
   fetchRecordPhotoUrl,
   updateRecordStatus,
+  reviewPhoto,
+  updateTeacherSession,
 } from "../../api/teacherService";
 import type { SessionOut, AttendanceRecordOut } from "../../types";
+import { formatWibTime } from "../../utils/date";
 import { ApiRequestError } from "../../api/client";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -46,9 +49,18 @@ export default function TeacherSessionMonitor() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Photo viewer modal
-  const [photoModal, setPhotoModal] = useState<{ url: string; studentName: string } | null>(null);
+  // Photo viewer & review modal
+  const [photoModal, setPhotoModal] = useState<{ url: string; record: AttendanceRecordOut } | null>(null);
   const [photoLoading, setPhotoLoading] = useState(false);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [showRejectInput, setShowRejectInput] = useState(false);
+  const [rejectReasonInput, setRejectReasonInput] = useState("");
+
+  // Edit session modal
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editEndTime, setEditEndTime] = useState("");
+  const [editLateThreshold, setEditLateThreshold] = useState(15);
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   // Fullscreen QR Modal (for projector display)
   const [qrFullscreen, setQrFullscreen] = useState(false);
@@ -130,13 +142,75 @@ export default function TeacherSessionMonitor() {
 
   async function viewPhoto(record: AttendanceRecordOut) {
     setPhotoLoading(true);
+    setShowRejectInput(false);
+    setRejectReasonInput("");
     try {
       const url = await fetchRecordPhotoUrl(record.id);
-      setPhotoModal({ url, studentName: record.student_name });
+      setPhotoModal({ url, record });
     } catch {
       alert("Gagal memuat foto bukti kehadiran.");
     } finally {
       setPhotoLoading(false);
+    }
+  }
+
+  async function handleApprovePhoto(recordId: number) {
+    setReviewSubmitting(true);
+    try {
+      await reviewPhoto(recordId, "approved");
+      setPhotoModal(null);
+      setShowRejectInput(false);
+      setRejectReasonInput("");
+      await refreshRecords();
+    } catch (e: any) {
+      alert(e instanceof ApiRequestError ? e.friendlyMessage : "Gagal menyetujui foto presensi.");
+    } finally {
+      setReviewSubmitting(false);
+    }
+  }
+
+  async function handleRejectPhoto(recordId: number) {
+    if (!showRejectInput) {
+      setShowRejectInput(true);
+      return;
+    }
+    const reason = rejectReasonInput.trim() || "Foto tidak memenuhi kriteria / wajah tidak terlihat jelas.";
+    setReviewSubmitting(true);
+    try {
+      await reviewPhoto(recordId, "rejected", reason);
+      setPhotoModal(null);
+      setShowRejectInput(false);
+      setRejectReasonInput("");
+      await refreshRecords();
+    } catch (e: any) {
+      alert(e instanceof ApiRequestError ? e.friendlyMessage : "Gagal menolak foto presensi.");
+    } finally {
+      setReviewSubmitting(false);
+    }
+  }
+
+  function openEditModal() {
+    if (!session) return;
+    setEditEndTime(session.end_time);
+    setEditLateThreshold(session.late_threshold_minutes);
+    setEditModalOpen(true);
+  }
+
+  async function handleSaveSessionEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!session) return;
+    setEditSubmitting(true);
+    try {
+      await updateTeacherSession(session.id, {
+        end_time: editEndTime,
+        late_threshold_minutes: Number(editLateThreshold),
+      });
+      setEditModalOpen(false);
+      await refreshRecords();
+    } catch (e: any) {
+      alert(e instanceof ApiRequestError ? e.friendlyMessage : "Gagal memperbarui pengaturan sesi.");
+    } finally {
+      setEditSubmitting(false);
     }
   }
 
@@ -191,10 +265,11 @@ export default function TeacherSessionMonitor() {
   const totalCheckedIn = records.length;
   const totalStudents = session.total_students || 0;
   const absentCount = Math.max(0, totalStudents - totalCheckedIn);
+  const pendingPhotos = records.filter((r) => r.photo_status === "pending").length;
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      {/* Back link */}
+      {/* Back link and actions */}
       <div className="flex items-center justify-between">
         <Link
           to="/teacher"
@@ -203,6 +278,14 @@ export default function TeacherSessionMonitor() {
           <ArrowLeft size={16} /> Dashboard Guru
         </Link>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={openEditModal}
+            leftIcon={<Edit2 size={14} />}
+          >
+            Edit Sesi
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -297,6 +380,26 @@ export default function TeacherSessionMonitor() {
           </div>
         </div>
       </div>
+
+      {/* Pending Photos Alert Banner */}
+      {pendingPhotos > 0 && (
+        <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 p-4 flex items-center justify-between gap-3 shadow-lg">
+          <div className="flex items-center gap-3">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping shrink-0" />
+            <div>
+              <p className="text-sm font-bold text-amber-200">
+                {pendingPhotos} Foto Bukti Menunggu Review Guru
+              </p>
+              <p className="text-xs text-amber-300/80">
+                Siswa telah mengirimkan foto bukti presensi selfie. Klik tombol "Review Foto" di bawah untuk menyetujui atau menolak.
+              </p>
+            </div>
+          </div>
+          <span className="px-3 py-1 rounded-xl bg-amber-500/20 border border-amber-500/40 text-xs font-bold text-amber-300 shrink-0">
+            Perlu Tindakan
+          </span>
+        </div>
+      )}
 
       {/* Main Grid: QR Card (left) & Live Student Feed (right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -406,6 +509,7 @@ export default function TeacherSessionMonitor() {
                                 minute: "2-digit",
                               })}{" "}
                               WIB
+                              Pukul {formatWibTime(r.checked_in_at)} WIB
                             </p>
                           </div>
                         </div>
@@ -434,10 +538,29 @@ export default function TeacherSessionMonitor() {
                             <button
                               type="button"
                               onClick={() => viewPhoto(r)}
-                              title="Lihat Foto Bukti Kehadiran"
-                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 hover:text-white transition-colors"
+                              title={
+                                r.photo_status === "approved"
+                                  ? "Foto Disetujui (Klik untuk melihat)"
+                                  : r.photo_status === "rejected"
+                                  ? `Foto Ditolak: ${r.photo_rejection_reason || ""}`
+                                  : "Foto Menunggu Review Guru (Klik untuk memverifikasi)"
+                              }
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                                r.photo_status === "approved"
+                                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25"
+                                  : r.photo_status === "rejected"
+                                  ? "bg-rose-500/15 text-rose-400 border border-rose-500/30 hover:bg-rose-500/25"
+                                  : "bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 animate-pulse"
+                              }`}
                             >
-                              <Camera size={14} />
+                              <Camera size={13} />
+                              <span>
+                                {r.photo_status === "approved"
+                                  ? "Disetujui"
+                                  : r.photo_status === "rejected"
+                                  ? "Ditolak"
+                                  : "Review Foto"}
+                              </span>
                             </button>
                           )}
 
@@ -466,28 +589,132 @@ export default function TeacherSessionMonitor() {
       </div>
 
       {/* ========================================================================= */}
-      {/* MODAL: PHOTO PROOF VIEWER */}
+      {/* MODAL: PHOTO PROOF REVIEW (APPROVE / REJECT) */}
       {/* ========================================================================= */}
       <Modal
         isOpen={Boolean(photoModal)}
-        onClose={() => setPhotoModal(null)}
-        title="Foto Bukti Kehadiran"
-        description={`Siswa: ${photoModal?.studentName || ""}`}
+        onClose={() => {
+          setPhotoModal(null);
+          setShowRejectInput(false);
+          setRejectReasonInput("");
+        }}
+        title="Review Foto Bukti Presensi"
+        description={`Siswa: ${photoModal?.record.student_name || ""}`}
         size="md"
       >
         {photoModal && (
-          <div className="space-y-4 text-center">
-            <div className="rounded-2xl overflow-hidden bg-black border border-slate-700 aspect-square max-w-sm mx-auto shadow-2xl">
+          <div className="space-y-4">
+            <div className="rounded-2xl overflow-hidden bg-black border border-slate-700 aspect-square max-w-sm mx-auto shadow-2xl relative">
               <img
                 src={photoModal.url}
                 alt="Bukti Kehadiran"
                 className="w-full h-full object-cover"
               />
+              <div className="absolute bottom-2.5 left-2.5 right-2.5 flex justify-center">
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-bold shadow-lg backdrop-blur-md ${
+                    photoModal.record.photo_status === "approved"
+                      ? "bg-emerald-600/90 text-white border border-emerald-400/40"
+                      : photoModal.record.photo_status === "rejected"
+                      ? "bg-rose-600/90 text-white border border-rose-400/40"
+                      : "bg-amber-500/90 text-slate-950 font-black border border-amber-300"
+                  }`}
+                >
+                  {photoModal.record.photo_status === "approved"
+                    ? "✓ Foto Disetujui"
+                    : photoModal.record.photo_status === "rejected"
+                    ? "✕ Foto Ditolak"
+                    : "🟡 Menunggu Review Guru"}
+                </span>
+              </div>
             </div>
-            <p className="text-xs text-slate-400">
-              Foto bukti kehadiran diverifikasi aman dan hanya dapat diakses oleh guru/admin.
-            </p>
-            <Button variant="secondary" size="sm" fullWidth onClick={() => setPhotoModal(null)}>
+
+            {photoModal.record.photo_rejection_reason && (
+              <div className="rounded-xl bg-rose-500/10 border border-rose-500/20 p-3 text-xs text-rose-300 text-left">
+                <strong className="text-rose-200">Alasan Penolakan:</strong>{" "}
+                {photoModal.record.photo_rejection_reason}
+              </div>
+            )}
+
+            {showRejectInput && (
+              <div className="space-y-1.5 text-left">
+                <label className="text-xs font-semibold text-rose-300 uppercase tracking-wider">
+                  Alasan Penolakan Foto
+                </label>
+                <input
+                  type="text"
+                  className="input-field border-rose-500/40 focus:border-rose-400"
+                  placeholder="Contoh: Wajah tidak terlihat jelas / bukan di dalam kelas"
+                  value={rejectReasonInput}
+                  onChange={(e) => setRejectReasonInput(e.target.value)}
+                  autoFocus
+                />
+              </div>
+            )}
+
+            {/* Actions for teacher */}
+            <div className="pt-2 flex flex-col sm:flex-row gap-2">
+              {!showRejectInput ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="md"
+                    fullWidth
+                    className="border-rose-500/40 text-rose-300 hover:bg-rose-500/10"
+                    onClick={() => setShowRejectInput(true)}
+                    disabled={reviewSubmitting}
+                  >
+                    Tolak Foto
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    fullWidth
+                    onClick={() => handleApprovePhoto(photoModal.record.id)}
+                    isLoading={reviewSubmitting}
+                  >
+                    Setujui Foto
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="md"
+                    fullWidth
+                    onClick={() => setShowRejectInput(false)}
+                    disabled={reviewSubmitting}
+                  >
+                    Batal
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="danger"
+                    size="md"
+                    fullWidth
+                    onClick={() => handleRejectPhoto(photoModal.record.id)}
+                    isLoading={reviewSubmitting}
+                  >
+                    Konfirmasi Tolak
+                  </Button>
+                </>
+              )}
+            </div>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              fullWidth
+              onClick={() => {
+                setPhotoModal(null);
+                setShowRejectInput(false);
+                setRejectReasonInput("");
+              }}
+            >
               Tutup Pratinjau
             </Button>
           </div>
@@ -591,6 +818,74 @@ export default function TeacherSessionMonitor() {
             </div>
           </form>
         )}
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL: EDIT SESSION SETTINGS */}
+      {/* ========================================================================= */}
+      <Modal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        title="Edit Pengaturan Sesi"
+        description={`Sesi: ${session.subject_name} (${session.class_name})`}
+        size="md"
+      >
+        <form onSubmit={handleSaveSessionEdit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              Jam Selesai (Format HH:MM)
+            </label>
+            <input
+              type="time"
+              required
+              className="input-field"
+              value={editEndTime}
+              onChange={(e) => setEditEndTime(e.target.value)}
+            />
+            <p className="text-[11px] text-slate-400 mt-1">
+              Jam selesai harus lebih besar dari jam mulai ({session.start_time} WIB).
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              Toleransi Keterlambatan (Menit)
+            </label>
+            <input
+              type="number"
+              min="0"
+              max="180"
+              required
+              className="input-field"
+              value={editLateThreshold}
+              onChange={(e) => setEditLateThreshold(Number(e.target.value))}
+            />
+            <p className="text-[11px] text-slate-400 mt-1">
+              Siswa yang presensi setelah batas ini akan otomatis berstatus Terlambat.
+            </p>
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              fullWidth
+              onClick={() => setEditModalOpen(false)}
+            >
+              Batal
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+              fullWidth
+              isLoading={editSubmitting}
+            >
+              Simpan Perubahan
+            </Button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

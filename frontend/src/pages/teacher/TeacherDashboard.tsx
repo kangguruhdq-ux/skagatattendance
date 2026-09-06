@@ -12,28 +12,63 @@ import {
   Radio,
   Eye,
   AlertCircle,
+  AlertTriangle,
+  Trash2,
 } from "lucide-react";
-import { getTeacherDashboard } from "../../api/teacherService";
+import { getTeacherDashboard, cancelTeacherSession } from "../../api/teacherService";
 import type { TeacherDashboard as TeacherDashboardType } from "../../types";
 import { ApiRequestError } from "../../api/client";
 import { Card, CardContent } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import StatusBadge from "../../components/StatusBadge";
 import { DashboardSkeleton } from "../../components/ui/Skeleton";
+import { Modal } from "../../components/ui/Modal";
 
 export default function TeacherDashboard() {
   const [data, setData] = useState<TeacherDashboardType | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    getTeacherDashboard()
+  // Delete modal state
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: number;
+    subject: string;
+    class_name: string;
+    start_time: string;
+    end_time: string;
+  } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  function loadDashboard() {
+    return getTeacherDashboard()
       .then(setData)
       .catch((e) =>
         setError(e instanceof ApiRequestError ? e.friendlyMessage : "Gagal memuat dashboard guru.")
-      )
-      .finally(() => setLoading(false));
+      );
+  }
+
+  useEffect(() => {
+    setLoading(true);
+    loadDashboard().finally(() => setLoading(false));
   }, []);
+
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      await cancelTeacherSession(deleteTarget.id);
+      setDeleteTarget(null);
+      await loadDashboard();
+    } catch (err) {
+      setDeleteError(
+        err instanceof ApiRequestError ? err.friendlyMessage : "Gagal menghapus sesi presensi."
+      );
+    } finally {
+      setDeleteLoading(false);
+    }
+  }
 
   if (loading) {
     return <DashboardSkeleton />;
@@ -186,20 +221,98 @@ export default function TeacherDashboard() {
                   </p>
                 </div>
 
-                <Link to={`/teacher/sessions/${s.id}`} className="shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
+                  <Link to={`/teacher/sessions/${s.id}`}>
+                    <Button
+                      variant={s.status === "active" ? "primary" : "secondary"}
+                      size="sm"
+                      rightIcon={<ArrowRight size={14} />}
+                    >
+                      {s.status === "active" ? "Buka Live Monitor" : "Lihat Rekap"}
+                    </Button>
+                  </Link>
                   <Button
-                    variant={s.status === "active" ? "primary" : "secondary"}
+                    variant="danger"
                     size="sm"
-                    rightIcon={<ArrowRight size={14} />}
+                    onClick={() => {
+                      setDeleteError(null);
+                      setDeleteTarget(s);
+                    }}
+                    title="Hapus Sesi Presensi"
+                    leftIcon={<Trash2 size={14} />}
                   >
-                    {s.status === "active" ? "Buka Live Monitor" : "Lihat Rekap"}
+                    Hapus
                   </Button>
-                </Link>
+                </div>
               </div>
             ))}
           </div>
         )}
       </Card>
+
+      {/* Modal Konfirmasi Hapus Sesi */}
+      <Modal
+        isOpen={Boolean(deleteTarget)}
+        onClose={() => {
+          if (!deleteLoading) {
+            setDeleteTarget(null);
+            setDeleteError(null);
+          }
+        }}
+        title="Hapus Sesi Presensi"
+        description="Konfirmasi penghapusan sesi presensi"
+        size="sm"
+      >
+        {deleteTarget && (
+          <div className="space-y-4">
+            <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3.5 text-xs text-amber-300 flex items-start gap-2.5">
+              <AlertTriangle className="text-amber-400 shrink-0 mt-0.5" size={16} />
+              <div>
+                <span className="font-semibold text-amber-200 block mb-1">Peringatan:</span>
+                Apakah Anda yakin ingin menghapus sesi <strong className="text-white">{deleteTarget.subject}</strong> kelas{" "}
+                <strong className="text-white">{deleteTarget.class_name}</strong> ({deleteTarget.start_time} - {deleteTarget.end_time} WIB)?
+                <span className="block mt-1 text-slate-400">
+                  Sesi akan dihapus dari daftar presensi. Histori presensi siswa yang sudah tersimpan tetap aman.
+                </span>
+              </div>
+            </div>
+
+            {deleteError && (
+              <div className="rounded-xl bg-rose-500/10 border border-rose-500/30 p-3 text-xs text-rose-300 flex items-center gap-2">
+                <AlertCircle size={15} className="shrink-0 text-rose-400" />
+                <span>{deleteError}</span>
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                fullWidth
+                disabled={deleteLoading}
+                onClick={() => {
+                  setDeleteTarget(null);
+                  setDeleteError(null);
+                }}
+              >
+                Batal
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="md"
+                fullWidth
+                isLoading={deleteLoading}
+                onClick={handleConfirmDelete}
+                leftIcon={<Trash2 size={15} />}
+              >
+                Hapus Sesi
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

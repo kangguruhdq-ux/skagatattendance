@@ -6,36 +6,282 @@ html, body, #root {
   height: 100%;
 }
 
+/* =========================================================================
+   THEME FOUNDATIONS & DESIGN TOKENS
+   ========================================================================= */
+
+/* Light Mode Defaults */
+html.light,
+html:not(.dark) {
+  --color-bg-base: #f8fafc;
+  --color-bg-surface: #ffffff;
+  --color-bg-subtle: #f1f5f9;
+  --color-border-subtle: #e2e8f0;
+  --color-border-strong: #cbd5e1;
+  --color-text-title: #0f172a;
+  --color-text-body: #334155;
+  --color-text-muted: #64748b;
+  color-scheme: light;
+}
+
+/* Dark Mode */
+html.dark {
+  --color-bg-base: #020617;
+  --color-bg-surface: #0f172a;
+  --color-bg-subtle: #090d16;
+  --color-border-subtle: #1e293b;
+  --color-border-strong: #334155;
+  --color-text-title: #ffffff;
+  --color-text-body: #f1f5f9;
+  --color-text-muted: #94a3b8;
+  color-scheme: dark;
+}
+
 body {
   font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
-  background-image:
-    radial-gradient(circle at 20% 0%, rgba(47, 143, 255, 0.12), transparent 45%),
-    radial-gradient(circle at 90% 10%, rgba(89, 174, 255, 0.08), transparent 40%);
   background-attachment: fixed;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+html.light body,
+html:not(.dark) body {
+  background-color: #f8fafc;
+  color: #1e293b;
+  background-image:
+    radial-gradient(circle at 20% 0%, rgba(16, 185, 129, 0.08), transparent 45%),
+    radial-gradient(circle at 90% 10%, rgba(52, 211, 153, 0.05), transparent 40%);
+}
+
+html.dark body {
+  background-color: #020617;
+  color: #f1f5f9;
+  background-image:
+    radial-gradient(circle at 20% 0%, rgba(16, 185, 129, 0.12), transparent 45%),
+    radial-gradient(circle at 90% 10%, rgba(52, 211, 153, 0.08), transparent 40%);
 }
 
 @layer components {
   .glass-card {
-    @apply bg-slate-900/60 border border-slate-700/60 backdrop-blur-xl rounded-2xl shadow-xl shadow-black/20;
+    @apply bg-white/90 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-700/60 backdrop-blur-xl rounded-2xl shadow-lg shadow-slate-200/50 dark:shadow-black/20 text-slate-800 dark:text-slate-100 transition-all duration-200;
   }
 
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-500
-           text-white font-semibold px-4 py-2.5 transition-colors shadow-glow disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-500 active:bg-brand-700
+           text-white font-semibold px-4 py-2.5 transition-all duration-150 shadow-glow disabled:opacity-50 disabled:cursor-not-allowed select-none;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-slate-800 hover:bg-slate-700
-           border border-slate-700 text-slate-100 font-medium px-4 py-2.5 transition-colors;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700
+           border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-medium px-4 py-2.5 transition-all duration-150 select-none;
   }
 
   .input-field {
-    @apply w-full rounded-xl bg-slate-900/80 border border-slate-700 px-3.5 py-2.5 text-sm
-           text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent;
+    @apply w-full rounded-xl bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700 px-3.5 py-2.5 text-sm
+           text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all duration-150;
   }
 
   .badge {
     @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium;
+  }
+}
+
+/* =========================================================================
+   LIGHT MODE COMPONENT & UTILITY OVERRIDES
+   Ensures existing pages adapt to Light Mode seamlessly
+   ========================================================================= */
+
+/* Main background wrappers */
+html:not(.dark) .bg-slate-950,
+html:not(.dark) .bg-slate-950\/95,
+html:not(.dark) .bg-slate-950\/90,
+html:not(.dark) .bg-slate-950\/80,
+html:not(.dark) .bg-slate-950\/70,
+html:not(.dark) .bg-slate-950\/60 {
+  background-color: #f8fafc !important;
+}
+
+/* Cards & containers in light mode */
+html:not(.dark) .bg-slate-900,
+html:not(.dark) .bg-slate-900\/95,
+html:not(.dark) .bg-slate-900\/90,
+html:not(.dark) .bg-slate-900\/80,
+html:not(.dark) .bg-slate-900\/70,
+html:not(.dark) .bg-slate-900\/60 {
+  background-color: #ffffff !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.03) !important;
+}
+
+/* Table header & subtle section backgrounds */
+html:not(.dark) .bg-slate-950\/40,
+html:not(.dark) thead tr {
+  background-color: #f1f5f9 !important;
+}
+
+/* Borders in light mode */
+html:not(.dark) .border-slate-800,
+html:not(.dark) .border-slate-800\/90,
+html:not(.dark) .border-slate-800\/80,
+html:not(.dark) .border-slate-800\/60,
+html:not(.dark) .border-slate-800\/40,
+html:not(.dark) .border-slate-700,
+html:not(.dark) .border-slate-700\/80,
+html:not(.dark) .border-slate-700\/60,
+html:not(.dark) .divide-slate-800,
+html:not(.dark) .divide-slate-800\/80,
+html:not(.dark) .divide-slate-700 {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) .hover\:border-slate-700:hover {
+  border-color: #cbd5e1 !important;
+}
+
+/* Headings and primary titles in light mode */
+html:not(.dark) h1.text-white,
+html:not(.dark) h2.text-white,
+html:not(.dark) h3.text-white,
+html:not(.dark) h4.text-white,
+html:not(.dark) p.text-white,
+html:not(.dark) strong.text-white,
+html:not(.dark) td.text-white,
+html:not(.dark) th.text-white {
+  color: #0f172a !important;
+}
+
+/* Text shades in light mode */
+html:not(.dark) .text-slate-100,
+html:not(.dark) .text-slate-200 {
+  color: #1e293b !important;
+}
+
+html:not(.dark) .text-slate-300 {
+  color: #334155 !important;
+}
+
+html:not(.dark) .text-slate-400 {
+  color: #64748b !important;
+}
+
+/* Inputs, Textareas, and Selects */
+html:not(.dark) input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html:not(.dark) select,
+html:not(.dark) textarea {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+html:not(.dark) input::placeholder,
+html:not(.dark) textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Modals */
+html:not(.dark) [role="dialog"] {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.15) !important;
+}
+
+/* Table rows hover */
+html:not(.dark) tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+
+/* Secondary & action buttons */
+html:not(.dark) button[class*="bg-slate-800"] {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+
+html:not(.dark) button[class*="bg-slate-800"]:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+/* Navigation links in light mode */
+html:not(.dark) aside a.bg-brand-600\/20,
+html:not(.dark) nav a.bg-brand-600\/20 {
+  background-color: #ecfdf5 !important;
+  border-color: #a7f3d0 !important;
+  color: #047857 !important;
+}
+
+html:not(.dark) aside a:not(.bg-brand-600\/20):hover,
+html:not(.dark) nav a:not(.bg-brand-600\/20):hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+/* =========================================================================
+   MODERN UI MICRO-ANIMATIONS
+   ========================================================================= */
+
+/* Smooth page fade-in */
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+main > * {
+  animation: pageFadeIn 220ms ease-out forwards;
+}
+
+/* Subtle card hover lift */
+@media (hover: hover) and (pointer: fine) {
+  .glass-card,
+  [class*="rounded-2xl"][class*="border"]:not([role="dialog"]):not(aside) {
+    transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+  }
+
+  .glass-card:hover,
+  [class*="rounded-2xl"][class*="border"]:not([role="dialog"]):not(aside):hover {
+    transform: translateY(-2px);
+  }
+}
+
+/* Smooth table rows hover */
+table tbody tr {
+  transition: background-color 150ms ease;
+}
+
+/* Button active / pressed micro-feedback */
+button:not(:disabled):active,
+a[role="button"]:not(:disabled):active {
+  transform: scale(0.985);
+}
+
+/* Modal enter animation */
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+[role="dialog"] {
+  animation: modalEnter 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Accessibility: Respect motion reduction */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

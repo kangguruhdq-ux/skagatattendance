@@ -1,5 +1,13 @@
 from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
+
+def _format_utc_iso(dt: Optional[datetime]) -> Optional[str]:
+    if not dt:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.isoformat()
 
 from fastapi import APIRouter, Depends, Form, File, UploadFile
 from fastapi.responses import FileResponse
@@ -9,7 +17,7 @@ from app.core.config import get_settings
 from app.core.deps import get_current_user, require_role
 from app.database.db import get_db
 from app.models.models import (
-    AttendanceSession, AttendanceRecord, AttendanceStatus, Student, Teacher,
+    AttendanceSession, AttendanceRecord, AttendanceStatus, PhotoStatus, Student, Teacher,
     Subject, SchoolClass, User,
 )
 from app.schemas.schemas import SessionCreate, ManualStatusUpdate
@@ -149,17 +157,24 @@ def get_session_records(
     )
     out = []
     for r in records:
+        photo_st = r.photo_status.value if r.photo_status else ("pending" if r.photo_path else "none")
         out.append({
             "id": r.id,
             "student_id": r.student_id,
             "student_name": r.student.full_name if r.student else None,
             "session_id": r.session_id,
             "checked_in_at": r.checked_in_at.isoformat(),
+            "checked_in_at": _format_utc_iso(r.checked_in_at),
             "status": r.status.value,
             "location_verified": r.location_verified,
             "distance_meters": r.distance_meters,
             "biometric_verified": r.biometric_verified,
             "has_photo": bool(r.photo_path),
+            "photo_status": photo_st,
+            "photo_reviewed_by": r.photo_reviewed_by,
+            "photo_reviewed_at": r.photo_reviewed_at.isoformat() if r.photo_reviewed_at else None,
+            "photo_reviewed_at": _format_utc_iso(r.photo_reviewed_at),
+            "photo_rejection_reason": r.photo_rejection_reason,
         })
     return ok({"session": _session_to_out(session, db), "records": out})
 
@@ -269,6 +284,7 @@ async def _process_attendance(
         photo_filename = await photo_service.save_attendance_photo(photo, session.id, student.id)
 
     determined_status = attendance_service.determine_attendance_status(session)
+    photo_status = PhotoStatus.pending if photo_filename else PhotoStatus.none
 
     record = AttendanceRecord(
         student_id=student.id,
@@ -280,6 +296,7 @@ async def _process_attendance(
         location_verified=location_verified,
         biometric_verified=biometric_verified,
         photo_path=photo_filename,
+        photo_status=photo_status,
     )
     db.add(record)
     db.commit()
@@ -291,11 +308,13 @@ async def _process_attendance(
         "subject_name": session.subject.name if session.subject else None,
         "class_name": session.school_class.name if session.school_class else None,
         "checked_in_at": record.checked_in_at.isoformat(),
+        "checked_in_at": _format_utc_iso(record.checked_in_at),
         "status": record.status.value,
         "location_verified": record.location_verified,
         "distance_meters": record.distance_meters,
         "biometric_verified": record.biometric_verified,
         "has_photo": bool(record.photo_path),
+        "photo_status": record.photo_status.value if record.photo_status else "none",
     }
 
 
@@ -379,6 +398,10 @@ def update_record_status(
     record = db.query(AttendanceRecord).get(record_id)
     if not record:
         raise ApiException(404, "NOT_FOUND", "Record not found.")
+
+    if user.role.value == "teacher":
+        if not user.teacher_profile or record.session.teacher_id != user.teacher_profile.id:
+            raise ApiException(403, "FORBIDDEN", "Anda hanya dapat mengubah presensi pada sesi Anda sendiri.")
     try:
         new_status = AttendanceStatus(payload.status)
     except ValueError:

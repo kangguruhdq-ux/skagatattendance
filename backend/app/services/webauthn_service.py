@@ -202,8 +202,10 @@ def _verify_client_data(client_data_json: bytes, expected_type: str, expected_ch
         raise WebAuthnError("Unexpected WebAuthn ceremony type.")
     if client_data.get("challenge") != expected_challenge:
         raise WebAuthnError("Challenge mismatch — possible replay attempt.")
-    if client_data.get("origin") not in settings.biometric_origins_list:
-        raise WebAuthnError("Origin not recognized.")
+    client_origin = (client_data.get("origin") or "").rstrip("/")
+    allowed_origins = [o.rstrip("/") for o in settings.biometric_origins_list]
+    if client_origin not in allowed_origins:
+        raise WebAuthnError(f"Origin '{client_origin}' not recognized. Allowed: {allowed_origins}")
     return client_data
 
 

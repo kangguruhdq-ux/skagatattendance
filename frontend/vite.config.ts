@@ -7,7 +7,9 @@ export default defineConfig({
     port: 5173,
     host: "0.0.0.0",
     allowedHosts: [
-      "opened-worth-acceptance-ambassador.trycloudflare.com"
+      ".trycloudflare.com",
+      "monetary-minister-molecular-conclusion.trycloudflare.com",
+      "localhost"
     ],
   },
 });

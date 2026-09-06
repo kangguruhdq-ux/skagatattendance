@@ -73,6 +73,16 @@ class ScheduleCreate(BaseModel):
     room: Optional[str] = None
 
 
+class ScheduleUpdate(BaseModel):
+    class_id: Optional[int] = None
+    subject_id: Optional[int] = None
+    teacher_id: Optional[int] = None
+    day_of_week: Optional[int] = Field(None, ge=0, le=6)
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    room: Optional[str] = None
+
+
 class ScheduleOut(ScheduleCreate):
     id: int
     subject_name: Optional[str] = None
@@ -118,6 +128,12 @@ class TeacherCreate(BaseModel):
     teacher_code: str
     full_name: str
     subject_specialty: Optional[str] = None
+
+
+class TeacherUpdate(BaseModel):
+    full_name: Optional[str] = None
+    subject_specialty: Optional[str] = None
+    is_active: Optional[bool] = None
 
 
 class TeacherOut(BaseModel):
@@ -198,6 +214,42 @@ class AttendanceRecordOut(BaseModel):
 class ManualStatusUpdate(BaseModel):
     status: str
     reason: str
+
+
+class AdminSessionCreate(BaseModel):
+    subject_id: int
+    class_id: int
+    teacher_id: int
+    date: str
+    start_time: str
+    end_time: str
+    room: Optional[str] = None
+    late_threshold_minutes: int = 10
+    require_gps: bool = False
+    require_photo: bool = False
+    require_biometric: bool = False
+    schedule_id: Optional[int] = None
+
+
+class AdminSessionUpdate(BaseModel):
+    subject_id: Optional[int] = None
+    class_id: Optional[int] = None
+    teacher_id: Optional[int] = None
+    date: Optional[str] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    room: Optional[str] = None
+    late_threshold_minutes: Optional[int] = None
+    require_gps: Optional[bool] = None
+    require_photo: Optional[bool] = None
+    require_biometric: Optional[bool] = None
+    schedule_id: Optional[int] = None
+
+
+class AttendanceRecordCorrection(BaseModel):
+    status: str
+    checked_in_time: Optional[str] = None
+    override_reason: Optional[str] = None
 
 
 # ---------- Dashboard / stats ----------

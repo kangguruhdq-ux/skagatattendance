@@ -48,11 +48,21 @@ class Settings(BaseSettings):
 
     @property
     def biometric_origins_list(self) -> List[str]:
-        return [o.strip() for o in self.BIOMETRIC_ORIGINS.split(",") if o.strip()]
+        origins = [o.strip().rstrip("/") for o in self.BIOMETRIC_ORIGINS.split(",") if o.strip()]
+        defaults = ["http://localhost:5173", "http://localhost:4173", "http://127.0.0.1:5173", "http://127.0.0.1:4173"]
+        for d in defaults:
+            if d not in origins:
+                origins.append(d)
+        return origins
 
     @property
     def cors_origins_list(self) -> List[str]:
-        return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+        origins = [o.strip().rstrip("/") for o in self.CORS_ORIGINS.split(",") if o.strip()]
+        defaults = ["http://localhost:5173", "http://localhost:4173", "http://127.0.0.1:5173", "http://127.0.0.1:4173"]
+        for d in defaults:
+            if d not in origins:
+                origins.append(d)
+        return origins
 
 
 @lru_cache

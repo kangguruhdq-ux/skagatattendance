@@ -4,6 +4,7 @@ import type {
   SessionOut,
   AttendanceRecordOut,
   SubjectRow,
+  TeacherProfile,
 } from "../types";
 
 // ============================================================
@@ -143,4 +144,93 @@ export async function fetchRecordPhotoUrl(
   );
 
   return URL.createObjectURL(res.data);
+}
+
+// ============================================================
+// REVIEW ATTENDANCE PHOTO (APPROVE / REJECT)
+// ============================================================
+
+export function reviewPhoto(
+  recordId: number,
+  status: "approved" | "rejected",
+  reason?: string
+) {
+  return apiCall<{
+    id: number;
+    photo_status: string;
+    photo_reviewed_by: number;
+    photo_reviewed_at: string | null;
+    photo_rejection_reason: string | null;
+  }>(
+    client.post(`/api/teacher/records/${recordId}/review-photo`, {
+      status,
+      reason,
+    })
+  );
+}
+
+// ============================================================
+// UPDATE & CANCEL TEACHER SESSION
+// ============================================================
+
+export function updateTeacherSession(
+  sessionId: number,
+  payload: { end_time?: string; late_threshold_minutes?: number }
+) {
+  return apiCall<{
+    id: number;
+    start_time: string;
+    end_time: string;
+    late_threshold_minutes: number;
+  }>(
+    client.put(`/api/teacher/sessions/${sessionId}`, payload)
+  );
+}
+
+export function cancelTeacherSession(sessionId: number) {
+  return apiCall<{ id: number; deleted: boolean }>(
+    client.delete(`/api/teacher/sessions/${sessionId}`)
+  );
+}
+
+export const deleteTeacherSession = cancelTeacherSession;
+
+// ============================================================
+// TEACHER PROFILE
+// ============================================================
+
+export function getTeacherProfile() {
+  return apiCall<TeacherProfile>(
+    client.get("/api/teacher/profile")
+  );
+}
+
+export function updateTeacherProfile(payload: {
+  full_name?: string;
+  subject_specialty?: string;
+}) {
+  return apiCall<{
+    id: number;
+    teacher_code: string;
+    full_name: string;
+    subject_specialty: string | null;
+  }>(
+    client.put("/api/teacher/profile", payload)
+  );
+}
+
+export function getTeacherSchedule() {
+  return apiCall<{
+    schedules: {
+      id: number;
+      class_id: number;
+      class_name: string;
+      subject_id: number;
+      subject_name: string;
+      day_of_week: number;
+      start_time: string;
+      end_time: string;
+      room: string;
+    }[];
+  }>(client.get("/api/teacher/schedule"));
 }

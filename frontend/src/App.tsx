@@ -17,9 +17,12 @@ import TeacherSessions from "./pages/teacher/TeacherSessions";
 import TeacherSessionMonitor from "./pages/teacher/TeacherSessionMonitor";
 
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUsers from "./pages/admin/AdminUsers";
 import AdminStudents from "./pages/admin/AdminStudents";
 import AdminTeachers from "./pages/admin/AdminTeachers";
 import AdminClasses from "./pages/admin/AdminClasses";
+import AdminSchedules from "./pages/admin/AdminSchedules";
+import AdminSessions from "./pages/admin/AdminSessions";
 import AdminReports from "./pages/admin/AdminReports";
 
 export default function App() {
@@ -67,9 +70,12 @@ export default function App() {
         }
       >
         <Route index element={<AdminDashboard />} />
+        <Route path="users" element={<AdminUsers />} />
         <Route path="students" element={<AdminStudents />} />
         <Route path="teachers" element={<AdminTeachers />} />
         <Route path="classes" element={<AdminClasses />} />
+        <Route path="schedules" element={<AdminSchedules />} />
+        <Route path="sessions" element={<AdminSessions />} />
         <Route path="reports" element={<AdminReports />} />
       </Route>
 

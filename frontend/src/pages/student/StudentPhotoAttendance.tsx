@@ -19,6 +19,7 @@ import {
 import { getStudentActiveSessions, photoAttendance, AttendanceResult } from "../../api/studentService";
 import { verifyBiometric } from "../../api/webauthnService";
 import { ApiRequestError } from "../../api/client";
+import { formatWibTime } from "../../utils/date";
 import { ActiveSessionItem } from "../../types";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -50,6 +51,7 @@ export default function StudentPhotoAttendance() {
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const navigate = useNavigate();
 
   // Load active sessions on mount
@@ -84,6 +86,14 @@ export default function StudentPhotoAttendance() {
   }, []);
 
   function stopCamera() {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => {
+        try {
+          t.stop();
+        } catch {}
+      });
+      streamRef.current = null;
+    }
     if (cameraStream) {
       cameraStream.getTracks().forEach((t) => {
         try {
@@ -118,6 +128,7 @@ export default function StudentPhotoAttendance() {
         audio: false,
       });
 
+      streamRef.current = stream;
       setCameraStream(stream);
       setFacingMode(desiredFacing);
 
@@ -633,6 +644,7 @@ export default function StudentPhotoAttendance() {
                   hour: "2-digit",
                   minute: "2-digit",
                 })}
+                {formatWibTime(result.checked_in_at)} WIB
               </span>
             </div>
 

@@ -52,19 +52,35 @@ def _get_student(user: User):
 def biometric_status(db: Session = Depends(get_db), user: User = Depends(require_role("student"))):
     student = _get_student(user)
     creds = db.query(BiometricCredential).filter(BiometricCredential.student_id == student.id).all()
+    from app.core.config import get_settings
+    settings = get_settings()
     return ok({
         "enrolled": len(creds) > 0,
-        "devices": [{"id": c.id, "label": c.device_label, "created_at": c.created_at.isoformat()} for c in creds],
+        "rp_id": settings.BIOMETRIC_RP_ID,
+        "devices": [
+            {
+                "id": c.id,
+                "credential_id": c.credential_id,
+                "label": c.device_label,
+                "created_at": c.created_at.isoformat(),
+            }
+            for c in creds
+        ],
     })
 
 
 @router.post("/register/options")
-def register_options(db: Session = Depends(get_db), user: User = Depends(require_role("student"))):
+def register_options(
+    relink: bool = False,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("student"))
+):
     student = _get_student(user)
     challenge = wa.generate_challenge()
     _store_challenge(student.id, challenge, "register")
 
-    existing = db.query(BiometricCredential).filter(BiometricCredential.student_id == student.id).all()
+    # If relink is requested, do not exclude existing credentials so the device can re-register under current origin/rpId
+    existing = [] if relink else db.query(BiometricCredential).filter(BiometricCredential.student_id == student.id).all()
     options = wa.build_registration_options(
         user_id=user.id,
         username=user.username,
@@ -90,19 +106,45 @@ def register_verify(payload: dict, db: Session = Depends(get_db), user: User = D
     except wa.WebAuthnError as e:
         raise ApiException(400, "BIOMETRIC_REGISTRATION_FAILED", str(e))
 
-    if db.query(BiometricCredential).filter(BiometricCredential.credential_id == result["credential_id"]).first():
-        raise ApiException(400, "CREDENTIAL_ALREADY_REGISTERED", "This device is already registered.")
+    existing_cred = db.query(BiometricCredential).filter(BiometricCredential.credential_id == result["credential_id"]).first()
+    if existing_cred:
+        if existing_cred.student_id == student.id:
+            # Re-enrollment/re-link on existing credential: update public key and sign count
+            existing_cred.public_key_cose = result["public_key_cose_b64"]
+            existing_cred.sign_count = result["sign_count"]
+            if payload.get("device_label"):
+                existing_cred.device_label = payload.get("device_label")
+            db.commit()
+            return ok({"enrolled": True, "relinked": True, "credential_id": existing_cred.credential_id})
+        else:
+            raise ApiException(400, "CREDENTIAL_ALREADY_REGISTERED", "Perangkat biometrik ini sudah terdaftar pada akun siswa lain.")
 
     cred = BiometricCredential(
         student_id=student.id,
         credential_id=result["credential_id"],
         public_key_cose=result["public_key_cose_b64"],
         sign_count=result["sign_count"],
-        device_label=payload.get("device_label") or "This device",
+        device_label=payload.get("device_label") or "Perangkat Saya",
     )
     db.add(cred)
     db.commit()
-    return ok({"enrolled": True, "credential_id": cred.credential_id})
+    return ok({"enrolled": True, "relinked": False, "credential_id": cred.credential_id})
+
+
+@router.delete("/device/{device_id}")
+def delete_device(device_id: int, db: Session = Depends(get_db), user: User = Depends(require_role("student"))):
+    student = _get_student(user)
+    cred = db.query(BiometricCredential).filter(
+        BiometricCredential.id == device_id,
+        BiometricCredential.student_id == student.id
+    ).first()
+    if not cred:
+        raise ApiException(404, "CREDENTIAL_NOT_FOUND", "Perangkat biometrik tidak ditemukan.")
+
+    db.delete(cred)
+    db.commit()
+    remaining = db.query(BiometricCredential).filter(BiometricCredential.student_id == student.id).count()
+    return ok({"deleted": True, "remaining_devices": remaining})
 
 
 @router.post("/authenticate/options")

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Search, Plus, Trash2 } from "lucide-react";
-import { listStudents, createStudent, deleteStudent, listClasses } from "../../api/adminService";
+import { Search, Plus, Trash2, CheckCircle2 } from "lucide-react";
+import { listStudents, createStudent, updateStudent, deleteStudent, listClasses } from "../../api/adminService";
 import type { StudentRow, ClassRow } from "../../types";
 import LoadingState, { EmptyState, ErrorState } from "../../components/LoadingState";
 import { ApiRequestError } from "../../api/client";
@@ -54,9 +54,19 @@ export default function AdminStudents() {
   }
 
   async function handleDeactivate(id: number) {
-    if (!confirm("Deactivate this student? Their attendance history will be preserved.")) return;
+    if (!confirm("Nonaktifkan akun siswa ini? Riwayat presensi akan tetap tersimpan aman di database.")) return;
     await deleteStudent(id);
     load();
+  }
+
+  async function handleReactivate(id: number) {
+    if (!confirm("Aktifkan kembali akun siswa ini?")) return;
+    try {
+      await updateStudent(id, { is_active: true });
+      load();
+    } catch (e: any) {
+      setError(e instanceof ApiRequestError ? e.message : "Gagal mengaktifkan kembali akun siswa.");
+    }
   }
 
   return (
@@ -129,9 +139,21 @@ export default function AdminStudents() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    {s.is_active && (
-                      <button onClick={() => handleDeactivate(s.id)} className="text-slate-500 hover:text-rose-400">
+                    {s.is_active ? (
+                      <button
+                        onClick={() => handleDeactivate(s.id)}
+                        title="Nonaktifkan Akun"
+                        className="text-slate-500 hover:text-rose-400 p-1"
+                      >
                         <Trash2 size={16} />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleReactivate(s.id)}
+                        title="Aktifkan Kembali Akun"
+                        className="text-slate-500 hover:text-emerald-400 p-1"
+                      >
+                        <CheckCircle2 size={16} />
                       </button>
                     )}
                   </td>

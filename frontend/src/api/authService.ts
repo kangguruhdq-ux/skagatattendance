@@ -16,3 +16,21 @@ export function fetchMe() {
     client.get("/api/auth/me")
   );
 }
+
+export function getPublicClasses() {
+  return apiCall<{ classes: { id: number; name: string; major: string | null; grade: string | null }[] }>(
+    client.get("/api/auth/classes")
+  );
+}
+
+export function registerStudent(payload: {
+  username: string;
+  password: string;
+  full_name: string;
+  student_code: string;
+  class_id: number;
+}) {
+  return apiCall<{ registered: boolean; username: string; full_name: string; class_name: string }>(
+    client.post("/api/auth/register-student", payload)
+  );
+}

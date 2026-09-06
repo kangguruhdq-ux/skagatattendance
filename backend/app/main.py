@@ -5,13 +5,13 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config import get_settings
-from app.database.db import Base, engine
+from app.database.db import Base, engine, ensure_schema
 from app.routers import auth, student, teacher, admin, attendance, biometric
 
 settings = get_settings()
 
-# Create tables if they don't exist yet (use Alembic migrations for real prod use).
-Base.metadata.create_all(bind=engine)
+# Create tables and ensure latest columns exist safely
+ensure_schema()
 
 app = FastAPI(title="SKAGATA ATTENDANCE API", version="1.0.0")
 

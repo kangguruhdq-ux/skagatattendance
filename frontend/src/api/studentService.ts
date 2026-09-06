@@ -1,5 +1,5 @@
 import { client, apiCall } from "./client";
-import type { StudentDashboard, AttendanceHistoryItem, ScheduleItem, ActiveSessionItem } from "../types";
+import type { StudentDashboard, AttendanceHistoryItem, ScheduleItem, ActiveSessionItem, StudentProfile } from "../types";
 
 export function getStudentDashboard() {
   return apiCall<StudentDashboard>(client.get("/api/student/dashboard"));
@@ -81,4 +81,29 @@ export function photoAttendance(payload: PhotoAttendancePayload) {
     client.post("/api/attendance/photo-checkin", form, { headers: { "Content-Type": "multipart/form-data" } })
   );
 }
+
+export function retakePhoto(recordId: number, photoBlob: Blob) {
+  const form = new FormData();
+  form.append("photo", photoBlob, "retake.jpg");
+  return apiCall<{ id: number; photo_status: string; has_photo: boolean }>(
+    client.post(`/api/student/records/${recordId}/retake-photo`, form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    })
+  );
+}
+
+export function getStudentProfile() {
+  return apiCall<StudentProfile>(client.get("/api/student/profile"));
+}
+
+export function updateStudentProfile(payload: { full_name?: string }) {
+  return apiCall<StudentProfile>(client.put("/api/student/profile", payload));
+}
+
+export function deleteAttendanceRecord(recordId: number) {
+  return apiCall<{ id: number; deleted: boolean }>(
+    client.delete(`/api/student/records/${recordId}`)
+  );
+}
+
 
