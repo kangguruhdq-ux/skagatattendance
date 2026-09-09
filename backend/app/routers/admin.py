@@ -16,12 +16,13 @@ from app.database.db import get_db
 from app.models.models import (
     Student, Teacher, SchoolClass, Subject, Schedule, User, RoleEnum,
     AttendanceRecord, AttendanceSession, AttendanceStatus, PhotoStatus,
+    ActivityLog, SystemSetting,
 )
 from app.schemas.schemas import (
     StudentCreate, StudentUpdate, TeacherCreate, TeacherUpdate, ClassCreate, SubjectCreate, ScheduleCreate, ScheduleUpdate,
     AdminSessionCreate, AdminSessionUpdate, AttendanceRecordCorrection,
 )
-from app.services import attendance_service
+from app.services import attendance_service, settings_service, activity_service
 from app.utils.response import ok, ApiException
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -1297,3 +1298,139 @@ def delete_attendance_record(
     rec.is_deleted = True
     db.commit()
     return ok({"id": record_id, "deleted": True})
+
+
+# =========================================================================
+# SYSTEM SETTINGS & GEOFENCE
+# =========================================================================
+
+class SystemSettingsUpdatePayload(BaseModel):
+    settings: dict
+
+
+@router.get("/settings")
+def get_settings_endpoint(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("admin")),
+):
+    all_settings = settings_service.get_all_settings(db)
+    school_loc = settings_service.get_school_location(db)
+    return ok({
+        "settings": all_settings,
+        "school_location": school_loc,
+    })
+
+
+@router.put("/settings")
+def update_settings_endpoint(
+    payload: SystemSettingsUpdatePayload,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("admin")),
+):
+    for k, v in payload.settings.items():
+        settings_service.set_setting(db, key=str(k), value=str(v), user_id=user.id)
+
+    activity_service.log_activity(
+        db,
+        action="SETTINGS_UPDATE",
+        description=f"Admin {user.username} memperbarui pengaturan sistem",
+        user_id=user.id,
+    )
+
+    all_settings = settings_service.get_all_settings(db)
+    school_loc = settings_service.get_school_location(db)
+    return ok({
+        "message": "Pengaturan sistem berhasil disimpan.",
+        "settings": all_settings,
+        "school_location": school_loc,
+    })
+
+
+# =========================================================================
+# ACTIVITY / AUDIT LOGS
+# =========================================================================
+
+@router.get("/activity-logs")
+def get_activity_logs(
+    action: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    limit: int = Query(100),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("admin")),
+):
+    query = db.query(ActivityLog)
+    if action:
+        query = query.filter(ActivityLog.action == action)
+    if search:
+        term = f"%{search.strip()}%"
+        query = query.filter(ActivityLog.description.ilike(term))
+
+    logs = query.order_by(ActivityLog.created_at.desc()).limit(limit).all()
+
+    out = [
+        {
+            "id": l.id,
+            "user_id": l.user_id,
+            "username": l.user.username if l.user else "System",
+            "action": l.action,
+            "description": l.description,
+            "ip_address": l.ip_address,
+            "created_at": l.created_at.isoformat() if l.created_at else None,
+        }
+        for l in logs
+    ]
+    return ok({"logs": out})
+
+
+# =========================================================================
+# SYSTEM STATUS HEALTH CHECK
+# =========================================================================
+
+@router.get("/system-status")
+def get_system_status(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("admin")),
+):
+    # Check database
+    try:
+        user_count = db.query(User).count()
+        db_status = "operational"
+    except Exception:
+        db_status = "error"
+        user_count = 0
+
+    # Check upload storage
+    try:
+        from app.core.config import get_settings
+        cfg = get_settings()
+        import os
+        base_dir = os.path.dirname(os.path.dirname(__file__))
+        upload_dirs = [
+            os.path.join(base_dir, cfg.UPLOAD_DIR),
+            os.path.join(base_dir, cfg.UPLOAD_AVATARS_DIR),
+            os.path.join(base_dir, cfg.UPLOAD_ATTACHMENTS_DIR),
+        ]
+        for d in upload_dirs:
+            os.makedirs(d, exist_ok=True)
+        storage_status = "operational"
+    except Exception:
+        storage_status = "warning"
+
+    loc = settings_service.get_school_location(db)
+
+    return ok({
+        "status": "operational" if db_status == "operational" else "warning",
+        "services": {
+            "api": {"name": "Backend API", "status": "operational", "version": "1.0.0"},
+            "database": {"name": "SQLite Database", "status": db_status, "total_users": user_count},
+            "storage": {"name": "Local Storage & Uploads", "status": storage_status},
+            "geofence": {
+                "name": "Geofence GPS SMKN 3 Yogyakarta",
+                "status": "operational" if loc["enabled"] else "disabled",
+                "details": f"{loc['latitude']}, {loc['longitude']} (radius {loc['radius_meters']}m)",
+            },
+            "biometric": {"name": "WebAuthn Biometric Engine", "status": "operational"},
+            "security": {"name": "Role Authorization & JWT", "status": "operational"},
+        }
+    })
+

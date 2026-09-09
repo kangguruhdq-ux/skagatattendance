@@ -21,7 +21,7 @@ from app.models.models import (
     Subject, SchoolClass, User,
 )
 from app.schemas.schemas import SessionCreate, ManualStatusUpdate
-from app.services import qr_service, attendance_service, geo_service, photo_service, webauthn_service as wa
+from app.services import qr_service, attendance_service, geo_service, photo_service, settings_service, webauthn_service as wa
 from app.utils.response import ok, ApiException
 
 router = APIRouter(prefix="/api/attendance", tags=["attendance"])
@@ -263,15 +263,24 @@ async def _process_attendance(
     distance = None
     if session.require_gps:
         if latitude is None or longitude is None:
-            raise ApiException(400, "LOCATION_REQUIRED", "Location permission is required for this session.")
+            raise ApiException(400, "LOCATION_REQUIRED", "Izin lokasi GPS diperlukan untuk sesi ini.")
+        school_loc = settings_service.get_school_location(db)
         within, distance = geo_service.is_within_radius(
             latitude, longitude,
-            settings.SCHOOL_LATITUDE, settings.SCHOOL_LONGITUDE,
-            settings.MAX_ATTENDANCE_RADIUS_METERS,
+            school_loc["latitude"], school_loc["longitude"],
+            school_loc["radius_meters"],
         )
-        location_verified = within
-        if not within:
-            raise ApiException(403, "OUTSIDE_AREA", "You're outside the attendance area.")
+        if school_loc["enabled"]:
+            location_verified = within
+            if not within:
+                raise ApiException(
+                    403,
+                    "OUTSIDE_AREA",
+                    f"Posisi Anda di luar batas toleransi ({int(distance)}m dari {school_loc['school_name']}). Batas maksimal {int(school_loc['radius_meters'])}m.",
+                )
+        else:
+            # Geofence validation disabled in system settings
+            location_verified = True
 
     # ---- Photo proof ----
     photo_filename = None

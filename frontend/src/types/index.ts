@@ -359,3 +359,152 @@ export interface PublicClass {
   grade?: string | null;
 }
 
+// =========================================================================
+// UPGRADE TYPES: SUPPORT, CORRECTIONS, ANNOUNCEMENTS, SETTINGS, PROFILE
+// =========================================================================
+
+export type TicketStatus = "OPEN" | "IN_PROGRESS" | "WAITING_FOR_USER" | "RESOLVED" | "CLOSED";
+export type TicketPriority = "LOW" | "MEDIUM" | "HIGH";
+
+export interface TicketMessage {
+  id: number;
+  sender_id: number;
+  sender_name: string;
+  sender_role: string;
+  message: string;
+  attachment_path: string | null;
+  created_at: string;
+}
+
+export interface SupportTicket {
+  id: number;
+  ticket_number: string;
+  user_id: number;
+  user_name: string;
+  user_role: string;
+  subject: string;
+  category: string;
+  priority: TicketPriority;
+  status: TicketStatus;
+  attachment_path: string | null;
+  created_at: string;
+  updated_at: string;
+  is_deleted?: boolean;
+  deleted_at?: string | null;
+  message_count?: number;
+  messages?: TicketMessage[];
+}
+
+export interface TicketStats {
+  total: number;
+  open: number;
+  in_progress: number;
+  waiting_for_user: number;
+  resolved: number;
+  closed: number;
+  high_priority: number;
+}
+
+export type CorrectionStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+export interface AttendanceCorrection {
+  id: number;
+  student_id: number;
+  student_name?: string | null;
+  student_code?: string | null;
+  class_name?: string | null;
+  session_id?: number | null;
+  subject_name?: string | null;
+  date: string;
+  target_status: string;
+  reason: string;
+  explanation: string;
+  attachment_path?: string | null;
+  status: CorrectionStatus;
+  reviewed_by?: number | null;
+  reviewer_name?: string | null;
+  reviewed_at?: string | null;
+  review_notes?: string | null;
+  created_at?: string | null;
+}
+
+export interface Announcement {
+  id: number;
+  title: string;
+  content: string;
+  category: string;
+  target_role: string;
+  author_name?: string;
+  published_at?: string | null;
+  expires_at?: string | null;
+  is_active: boolean;
+  created_at?: string | null;
+}
+
+export interface NotificationItem {
+  id: number;
+  title: string;
+  message: string;
+  type: string;
+  link?: string | null;
+  is_read: boolean;
+  created_at?: string | null;
+}
+
+export interface UserProfile {
+  id: number;
+  username: string;
+  role: Role;
+  full_name: string;
+  email?: string | null;
+  avatar_path?: string | null;
+  avatar_url?: string | null;
+  student_info?: {
+    student_id: number;
+    student_code: string;
+    class_id: number | null;
+    class_name: string | null;
+    major: string | null;
+    grade: string | null;
+  } | null;
+  teacher_info?: {
+    teacher_id: number;
+    teacher_code: string;
+    subject_specialty: string | null;
+  } | null;
+  created_at?: string | null;
+}
+
+export interface SchoolLocationConfig {
+  latitude: number;
+  longitude: number;
+  radius_meters: number;
+  enabled: boolean;
+  school_name: string;
+  school_address: string;
+}
+
+export interface SystemStatusService {
+  name: string;
+  status: "operational" | "warning" | "error" | "disabled";
+  details?: string;
+  version?: string;
+  total_users?: number;
+}
+
+export interface SystemStatusData {
+  status: "operational" | "warning" | "error";
+  services: Record<string, SystemStatusService>;
+}
+
+export interface ActivityLogRow {
+  id: number;
+  user_id?: number | null;
+  username: string;
+  action: string;
+  description: string;
+  ip_address?: string | null;
+  created_at?: string | null;
+}
+
+

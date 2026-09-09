@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+
 html, body, #root {
   height: 100%;
 }
@@ -62,27 +67,46 @@ html.dark body {
 
 @layer components {
   .glass-card {
-    @apply bg-white/90 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-700/60 backdrop-blur-xl rounded-2xl shadow-lg shadow-slate-200/50 dark:shadow-black/20 text-slate-800 dark:text-slate-100 transition-all duration-200;
+    @apply bg-white/90 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-700/60 backdrop-blur-xl rounded-2xl shadow-lg shadow-slate-200/50 dark:shadow-black/20 text-slate-800 dark:text-slate-100 transition-all duration-300;
+  }
+
+  .glass-card:hover {
+    @apply shadow-card-hover-light dark:shadow-card-hover;
   }
 
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-500 active:bg-brand-700
-           text-white font-semibold px-4 py-2.5 transition-all duration-150 shadow-glow disabled:opacity-50 disabled:cursor-not-allowed select-none;
+           text-white font-semibold px-4 py-2.5 transition-all duration-200 shadow-glow disabled:opacity-50 disabled:cursor-not-allowed select-none;
   }
 
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700
-           border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-medium px-4 py-2.5 transition-all duration-150 select-none;
+           border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 font-medium px-4 py-2.5 transition-all duration-200 select-none;
   }
 
   .input-field {
     @apply w-full rounded-xl bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700 px-3.5 py-2.5 text-sm
-           text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all duration-150;
+           text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all duration-200;
   }
 
   .badge {
     @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium;
   }
+
+  /* Staggered children animation — apply to parent container */
+  .stagger-children > * {
+    opacity: 0;
+    animation: fadeIn 0.4s ease-out forwards;
+  }
+  .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+  .stagger-children > *:nth-child(2) { animation-delay: 60ms; }
+  .stagger-children > *:nth-child(3) { animation-delay: 120ms; }
+  .stagger-children > *:nth-child(4) { animation-delay: 180ms; }
+  .stagger-children > *:nth-child(5) { animation-delay: 240ms; }
+  .stagger-children > *:nth-child(6) { animation-delay: 300ms; }
+  .stagger-children > *:nth-child(7) { animation-delay: 360ms; }
+  .stagger-children > *:nth-child(8) { animation-delay: 420ms; }
+  .stagger-children > *:nth-child(n+9) { animation-delay: 480ms; }
 }
 
 /* =========================================================================
@@ -219,51 +243,64 @@ html:not(.dark) nav a:not(.bg-brand-600\/20):hover {
    MODERN UI MICRO-ANIMATIONS
    ========================================================================= */
 
-/* Smooth page fade-in */
+/* Smooth page fade-in with stagger */
 @keyframes pageFadeIn {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
 main > * {
-  animation: pageFadeIn 220ms ease-out forwards;
+  animation: pageFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Subtle card hover lift */
+main > *:nth-child(2) { animation-delay: 60ms; }
+main > *:nth-child(3) { animation-delay: 120ms; }
+main > *:nth-child(4) { animation-delay: 180ms; }
+main > *:nth-child(n+5) { animation-delay: 220ms; }
+
+/* Subtle card hover lift — desktop only */
 @media (hover: hover) and (pointer: fine) {
   .glass-card,
-  [class*="rounded-2xl"][class*="border"]:not([role="dialog"]):not(aside) {
-    transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+  [class*="rounded-2xl"][class*="border"]:not([role="dialog"]):not(aside):not(nav) {
+    transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 300ms ease, border-color 300ms ease;
   }
 
   .glass-card:hover,
-  [class*="rounded-2xl"][class*="border"]:not([role="dialog"]):not(aside):hover {
+  [class*="rounded-2xl"][class*="border"]:not([role="dialog"]):not(aside):not(nav):hover {
     transform: translateY(-2px);
   }
 }
 
 /* Smooth table rows hover */
 table tbody tr {
-  transition: background-color 150ms ease;
+  transition: background-color 200ms ease;
 }
 
 /* Button active / pressed micro-feedback */
 button:not(:disabled):active,
 a[role="button"]:not(:disabled):active {
-  transform: scale(0.985);
+  transform: scale(0.98);
+  transition: transform 100ms ease;
+}
+
+/* Focus visible ring for keyboard accessibility */
+*:focus-visible {
+  outline: 2px solid rgba(16, 185, 129, 0.5);
+  outline-offset: 2px;
+  border-radius: 8px;
 }
 
 /* Modal enter animation */
 @keyframes modalEnter {
   from {
     opacity: 0;
-    transform: scale(0.96) translateY(6px);
+    transform: scale(0.96) translateY(8px);
   }
   to {
     opacity: 1;
@@ -272,7 +309,39 @@ a[role="button"]:not(:disabled):active {
 }
 
 [role="dialog"] {
-  animation: modalEnter 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: modalEnter 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Drawer slide-in from left (for mobile sidebar) */
+@keyframes drawerSlideIn {
+  from {
+    transform: translateX(-100%);
+    opacity: 0.5;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.drawer-animate {
+  animation: drawerSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Notification popover drop */
+@keyframes dropIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-drop-in {
+  animation: dropIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* Accessibility: Respect motion reduction */
@@ -285,5 +354,14 @@ a[role="button"]:not(:disabled):active {
   }
 }
 
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 999px; }
+/* Custom scrollbars */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.25); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.4); }
+
+/* Mobile: hide scrollbar for cleaner look */
+@media (max-width: 640px) {
+  ::-webkit-scrollbar { width: 3px; height: 3px; }
+}
+

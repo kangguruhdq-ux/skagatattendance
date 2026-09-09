@@ -58,6 +58,8 @@ class User(Base):
     username = Column(String(64), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     role = Column(Enum(RoleEnum), nullable=False)
+    email = Column(String(128), nullable=True)
+    avatar_path = Column(String(255), nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -236,3 +238,170 @@ class BiometricCredential(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     student = relationship("Student")
+
+
+# =========================================================================
+# SYSTEM SETTINGS & GEOFENCE CONFIGURATION
+# =========================================================================
+
+class SystemSetting(Base):
+    __tablename__ = "system_settings"
+
+    key = Column(String(64), primary_key=True, index=True)
+    value = Column(Text, nullable=False)
+    description = Column(String(255), nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    updater = relationship("User", foreign_keys=[updated_by])
+
+
+# =========================================================================
+# SUPPORT TICKET / REPORT SYSTEM
+# =========================================================================
+
+class TicketStatus(str, enum.Enum):
+    OPEN = "OPEN"
+    IN_PROGRESS = "IN_PROGRESS"
+    WAITING_FOR_USER = "WAITING_FOR_USER"
+    RESOLVED = "RESOLVED"
+    CLOSED = "CLOSED"
+
+
+class TicketPriority(str, enum.Enum):
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+
+
+class SupportTicket(Base):
+    __tablename__ = "support_tickets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ticket_number = Column(String(32), unique=True, index=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    subject = Column(String(255), nullable=False)
+    category = Column(String(64), nullable=False)  # Presensi, GPS, Kamera, Foto, Akun, Jadwal, Sistem, Bug, Lainnya
+    priority = Column(Enum(TicketPriority), default=TicketPriority.MEDIUM, nullable=False)
+    status = Column(Enum(TicketStatus), default=TicketStatus.OPEN, nullable=False)
+    attachment_path = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at = Column(DateTime, nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    user = relationship("User", foreign_keys=[user_id])
+    deleter = relationship("User", foreign_keys=[deleted_by])
+    messages = relationship("TicketMessage", back_populates="ticket", cascade="all, delete-orphan", order_by="TicketMessage.created_at")
+
+
+class TicketMessage(Base):
+    __tablename__ = "ticket_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ticket_id = Column(Integer, ForeignKey("support_tickets.id"), nullable=False)
+    sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    message = Column(Text, nullable=False)
+    attachment_path = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at = Column(DateTime, nullable=True)
+    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    ticket = relationship("SupportTicket", back_populates="messages")
+    sender = relationship("User", foreign_keys=[sender_id])
+    deleter = relationship("User", foreign_keys=[deleted_by])
+
+
+# =========================================================================
+# ATTENDANCE CORRECTION REQUESTS
+# =========================================================================
+
+class CorrectionStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+
+
+class AttendanceCorrection(Base):
+    __tablename__ = "attendance_corrections"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    session_id = Column(Integer, ForeignKey("attendance_sessions.id"), nullable=True)
+    date = Column(String(10), nullable=False)  # "2026-09-09"
+    target_status = Column(Enum(AttendanceStatus), nullable=False)
+    reason = Column(String(128), nullable=False)
+    explanation = Column(Text, nullable=False)
+    attachment_path = Column(String(255), nullable=True)
+    status = Column(Enum(CorrectionStatus), default=CorrectionStatus.PENDING, nullable=False)
+
+    reviewed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    reviewed_at = Column(DateTime, nullable=True)
+    review_notes = Column(Text, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    student = relationship("Student")
+    session = relationship("AttendanceSession")
+    reviewer = relationship("User", foreign_keys=[reviewed_by])
+
+
+# =========================================================================
+# ANNOUNCEMENTS
+# =========================================================================
+
+class Announcement(Base):
+    __tablename__ = "announcements"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(255), nullable=False)
+    content = Column(Text, nullable=False)
+    category = Column(String(64), default="Info", nullable=False)
+    target_role = Column(String(32), default="ALL", nullable=False)  # ALL, STUDENT, TEACHER, ADMIN
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    published_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    author = relationship("User", foreign_keys=[created_by])
+
+
+# =========================================================================
+# NOTIFICATIONS
+# =========================================================================
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    title = Column(String(255), nullable=False)
+    message = Column(Text, nullable=False)
+    type = Column(String(32), default="info")  # info, success, warning, ticket, correction, attendance
+    link = Column(String(255), nullable=True)
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", foreign_keys=[user_id])
+
+
+# =========================================================================
+# ACTIVITY / AUDIT LOGS
+# =========================================================================
+
+class ActivityLog(Base):
+    __tablename__ = "activity_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    action = Column(String(64), nullable=False)
+    description = Column(Text, nullable=False)
+    ip_address = Column(String(64), nullable=True)
+    details = Column(Text, nullable=True)  # JSON or text summary
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", foreign_keys=[user_id])
+

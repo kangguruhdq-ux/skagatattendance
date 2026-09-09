@@ -1,12 +1,17 @@
+import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
+from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config import get_settings
 from app.database.db import Base, engine, ensure_schema
-from app.routers import auth, student, teacher, admin, attendance, biometric
+from app.routers import (
+    auth, student, teacher, admin, attendance, biometric,
+    support, corrections, announcements, notifications, profile,
+)
 
 settings = get_settings()
 
@@ -60,9 +65,22 @@ def health():
     return {"success": True, "data": {"status": "ok"}, "error": None}
 
 
+# Static uploads mount
+uploads_root = os.path.join(os.path.dirname(__file__), "uploads")
+os.makedirs(uploads_root, exist_ok=True)
+os.makedirs(os.path.join(uploads_root, "avatars"), exist_ok=True)
+os.makedirs(os.path.join(uploads_root, "attachments"), exist_ok=True)
+os.makedirs(os.path.join(uploads_root, "attendance_photos"), exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=uploads_root), name="uploads")
+
 app.include_router(auth.router)
 app.include_router(student.router)
 app.include_router(teacher.router)
 app.include_router(admin.router)
 app.include_router(attendance.router)
 app.include_router(biometric.router)
+app.include_router(support.router)
+app.include_router(corrections.router)
+app.include_router(announcements.router)
+app.include_router(notifications.router)
+app.include_router(profile.router)

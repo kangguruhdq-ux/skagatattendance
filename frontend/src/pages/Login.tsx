@@ -114,19 +114,19 @@ export default function Login() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 px-4 py-8 relative overflow-hidden transition-colors duration-200">
       {/* Theme Toggle Top Right */}
-      <div className="absolute top-4 right-4 z-20">
-        <ThemeToggle showLabel />
+      <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20">
+        <ThemeToggle />
       </div>
 
-      {/* Background glow effects */}
-      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-brand-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-brand-500/10 rounded-full blur-3xl pointer-events-none" />
+      {/* Background glow effects — responsive & floating */}
+      <div className="absolute top-1/4 -left-32 w-64 h-64 sm:w-96 sm:h-96 bg-brand-600/10 rounded-full blur-3xl pointer-events-none animate-float" />
+      <div className="absolute bottom-1/4 -right-32 w-64 h-64 sm:w-96 sm:h-96 bg-brand-500/10 rounded-full blur-3xl pointer-events-none animate-float" style={{ animationDelay: '3s' }} />
 
-      <div className="w-full max-w-md space-y-6 relative z-10">
+      <div className="w-full max-w-md space-y-6 relative z-10 animate-fadeIn">
         {/* Brand Header */}
         <div className="flex flex-col items-center text-center">
           <SchoolLogo size="lg" className="mb-3" />
-          <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">SKAGATA ATTENDANCE</h1>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">SKAGATA ATTENDANCE</h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
             Sistem Presensi Digital SMK Negeri 3 Yogyakarta
           </p>
@@ -280,7 +280,7 @@ export default function Login() {
             />
           </div>
 
-          <div className="pt-3 flex gap-2">
+          <div className="pt-3 flex flex-col-reverse sm:flex-row gap-2">
             <Button
               type="button"
               variant="secondary"

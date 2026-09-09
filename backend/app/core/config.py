@@ -21,28 +21,27 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:4173"
 
-    # School location (demo/placeholder values — override in real deployment)
-    SCHOOL_LATITUDE: float = -7.797068
-    SCHOOL_LONGITUDE: float = 110.370529
-    MAX_ATTENDANCE_RADIUS_METERS: float = 150
+    # School location — SMKN 3 Yogyakarta
+    SCHOOL_LATITUDE: float = -7.777500
+    SCHOOL_LONGITUDE: float = 110.365900
+    MAX_ATTENDANCE_RADIUS_METERS: float = 150.0
 
     # QR session token signing
     QR_TOKEN_SECRET: str = "dev-qr-secret-change-me"
 
     # WebAuthn (fingerprint/Face ID) biometric verification
-    # RP_ID must be the bare domain the frontend is served from (no scheme/port),
-    # e.g. "localhost" for local dev, "skagata-attendance.netlify.app" in production.
     BIOMETRIC_RP_ID: str = "localhost"
     BIOMETRIC_RP_NAME: str = "SKAGATA ATTENDANCE"
-    # Full origin(s) the browser will report in clientDataJSON — comma separated.
     BIOMETRIC_ORIGINS: str = "http://localhost:5173,http://localhost:4173"
-    # Short-lived token proving a biometric check just passed, consumed by /scan.
     BIOMETRIC_TOKEN_SECRET: str = "dev-biometric-secret-change-me"
     BIOMETRIC_TOKEN_TTL_SECONDS: int = 90
 
-    # Photo proof upload
+    # File uploads
     UPLOAD_DIR: str = "uploads/attendance_photos"
+    UPLOAD_AVATARS_DIR: str = "uploads/avatars"
+    UPLOAD_ATTACHMENTS_DIR: str = "uploads/attachments"
     MAX_PHOTO_SIZE_MB: float = 4.0
+    MAX_ATTACHMENT_SIZE_MB: float = 5.0
 
     ENVIRONMENT: str = "development"
 

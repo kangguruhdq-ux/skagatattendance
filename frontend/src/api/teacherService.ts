@@ -234,3 +234,43 @@ export function getTeacherSchedule() {
     }[];
   }>(client.get("/api/teacher/schedule"));
 }
+
+export interface TeacherStudentItem {
+  id: number;
+  student_code: string;
+  full_name: string;
+  class_id: number | null;
+  class_name: string | null;
+  total_attended: number;
+  present_count: number;
+  late_count: number;
+  attendance_rate: number;
+}
+
+export function getTeacherStudents(params?: { class_id?: number; search?: string }) {
+  return apiCall<{ students: TeacherStudentItem[] }>(
+    client.get("/api/teacher/students", { params })
+  );
+}
+
+export interface TeacherAnalyticsData {
+  total_sessions: number;
+  total_records: number;
+  present_count: number;
+  late_count: number;
+  excused_count: number;
+  sick_count: number;
+  absent_count: number;
+  attendance_rate: number;
+  pending_photos: number;
+  class_breakdown: {
+    class_id: number;
+    class_name: string;
+    sessions_count: number;
+    attendance_rate: number;
+  }[];
+}
+
+export function getTeacherAnalytics() {
+  return apiCall<TeacherAnalyticsData>(client.get("/api/teacher/analytics"));
+}

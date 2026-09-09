@@ -87,9 +87,9 @@ export default function StudentDashboard() {
       {/* ========================================================================= */}
       {/* 1. HERO GREETING & PROFILE BANNER */}
       {/* ========================================================================= */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-900/40 via-slate-900/80 to-slate-950 border border-brand-500/20 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-900/40 via-slate-900/80 to-slate-950 border border-brand-500/20 p-5 sm:p-8 shadow-2xl backdrop-blur-xl animate-fadeIn">
         {/* Subtle background glow circle */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-brand-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-48 h-48 sm:w-80 sm:h-80 bg-brand-500/10 rounded-full blur-3xl pointer-events-none animate-float" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
           <div>
@@ -99,7 +99,7 @@ export default function StudentDashboard() {
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
               Halo, {firstName}! 👋
             </h1>
-            <p className="text-sm text-slate-300 mt-1">
+            <p className="text-xs sm:text-sm text-slate-300 mt-1">
               Kelas: <span className="font-semibold text-white">{data.class_name || "XI TKJ 1"}</span>
               {data.student_code && (
                 <span className="text-slate-400 font-mono ml-2">({data.student_code})</span>
@@ -108,9 +108,9 @@ export default function StudentDashboard() {
           </div>
 
           {/* Today's Check-in Status Badge */}
-          <div className="bg-slate-900/80 border border-slate-700/80 rounded-2xl p-4 flex items-center gap-4 shrink-0">
+          <div className="bg-slate-900/80 border border-slate-700/80 rounded-2xl p-3.5 sm:p-4 flex items-center justify-between sm:justify-start gap-4 shrink-0 shadow-lg">
             <div className="text-left">
-              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              <p className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                 Status Presensi Hari Ini
               </p>
               <div className="mt-1">
@@ -123,10 +123,10 @@ export default function StudentDashboard() {
             </div>
             <div className="h-10 w-px bg-slate-800" />
             <div className="text-right">
-              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              <p className="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                 Kehadiran
               </p>
-              <p className="text-2xl font-black text-emerald-400 leading-tight">
+              <p className="text-xl sm:text-2xl font-black text-emerald-400 leading-tight">
                 {data.attendance_rate}%
               </p>
             </div>
@@ -243,14 +243,14 @@ export default function StudentDashboard() {
               </div>
             </div>
 
-            <div className="flex sm:flex-col gap-2 shrink-0">
+            <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full sm:w-auto">
               <Link to="/student/photo" className="w-full sm:w-auto">
-                <Button variant="primary" size="md" leftIcon={<Camera size={16} />}>
+                <Button variant="primary" size="md" fullWidth leftIcon={<Camera size={16} />}>
                   Absen Sekarang
                 </Button>
               </Link>
               <Link to="/student/scan" className="w-full sm:w-auto">
-                <Button variant="secondary" size="md" leftIcon={<QrCode size={16} />}>
+                <Button variant="secondary" size="md" fullWidth leftIcon={<QrCode size={16} />}>
                   Scan QR
                 </Button>
               </Link>
@@ -259,7 +259,7 @@ export default function StudentDashboard() {
         </Card>
       ) : attendedTodaySession ? (
         <Card className="p-4 border-emerald-500/30 bg-emerald-950/10">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <CheckCircle2 className="text-emerald-400 shrink-0" size={22} />
               <div>
@@ -267,20 +267,12 @@ export default function StudentDashboard() {
                   Sudah Presensi: {attendedTodaySession.subject_name}
                 </p>
                 <p className="text-xs text-slate-400">
-                  Tercatat pukul{" "}
-                  {attendedTodaySession.checked_in_at
-                    ? new Date(attendedTodaySession.checked_in_at).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    : "-"}{" "}
-                  • Status: <span className="uppercase font-semibold text-emerald-300">{attendedTodaySession.checked_in_status}</span>
                   Tercatat pukul {formatWibTime(attendedTodaySession.checked_in_at)} WIB • Status:{" "}
                   <span className="uppercase font-semibold text-emerald-300">{attendedTodaySession.checked_in_status}</span>
                 </p>
               </div>
             </div>
-            <Link to="/student/history">
+            <Link to="/student/history" className="self-end sm:self-auto">
               <Button variant="ghost" size="sm">
                 Lihat Detail
               </Button>
@@ -297,8 +289,8 @@ export default function StudentDashboard() {
           Statistik Kehadiran Semester Ini
         </p>
 
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3.5">
-          <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-3.5 stagger-children">
+          <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-4 transition-transform hover:-translate-y-1 hover:border-emerald-500/30">
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-400 font-medium">Hadir</span>
               <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
@@ -309,7 +301,7 @@ export default function StudentDashboard() {
             <p className="text-[11px] text-emerald-400/90 mt-0.5">Tepat Waktu</p>
           </div>
 
-          <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-4">
+          <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-4 transition-transform hover:-translate-y-1 hover:border-amber-500/30">
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-400 font-medium">Terlambat</span>
               <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400">
@@ -320,7 +312,7 @@ export default function StudentDashboard() {
             <p className="text-[11px] text-amber-400/90 mt-0.5">Dispensasi waktu</p>
           </div>
 
-          <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-4">
+          <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-4 transition-transform hover:-translate-y-1 hover:border-rose-500/30">
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-400 font-medium">Alpa</span>
               <div className="p-2 rounded-xl bg-rose-500/10 text-rose-400">
@@ -331,7 +323,7 @@ export default function StudentDashboard() {
             <p className="text-[11px] text-rose-400/90 mt-0.5">Tanpa keterangan</p>
           </div>
 
-          <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-4">
+          <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-4 transition-transform hover:-translate-y-1 hover:border-sky-500/30">
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-400 font-medium">Izin</span>
               <div className="p-2 rounded-xl bg-sky-500/10 text-sky-400">
@@ -342,7 +334,7 @@ export default function StudentDashboard() {
             <p className="text-[11px] text-sky-400/90 mt-0.5">Surat izin resmi</p>
           </div>
 
-          <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-4">
+          <div className="col-span-2 sm:col-span-1 rounded-2xl bg-slate-900/80 border border-slate-800 p-4 transition-transform hover:-translate-y-1 hover:border-violet-500/30">
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-400 font-medium">Sakit</span>
               <div className="p-2 rounded-xl bg-violet-500/10 text-violet-400">
@@ -380,18 +372,18 @@ export default function StudentDashboard() {
               {data.today_schedule.map((s, i) => (
                 <div
                   key={i}
-                  className="flex items-center justify-between bg-slate-950/60 border border-slate-800/80 rounded-xl px-4 py-3"
+                  className="flex items-center justify-between gap-3 bg-slate-950/60 border border-slate-800/80 rounded-xl px-3.5 sm:px-4 py-3 hover:border-slate-700 transition-colors"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-brand-500/10 text-brand-400 flex items-center justify-center font-bold text-xs">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-brand-500/10 text-brand-400 flex items-center justify-center font-bold text-xs shrink-0">
                       {i + 1}
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-white">{s.subject}</p>
-                      <p className="text-xs text-slate-400">{s.room || "Ruang Kelas"}</p>
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm font-semibold text-white truncate">{s.subject}</p>
+                      <p className="text-[11px] sm:text-xs text-slate-400 truncate">{s.room || "Ruang Kelas"}</p>
                     </div>
                   </div>
-                  <span className="text-xs text-slate-300 font-mono bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">
+                  <span className="text-[11px] sm:text-xs text-slate-300 font-mono bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800 shrink-0">
                     {s.start_time} - {s.end_time}
                   </span>
                 </div>

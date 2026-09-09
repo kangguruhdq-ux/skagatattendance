@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { Search, Plus, Trash2, CheckCircle2 } from "lucide-react";
+import { Search, Plus, Trash2, CheckCircle2, Edit2 } from "lucide-react";
 import { listStudents, createStudent, updateStudent, deleteStudent, listClasses } from "../../api/adminService";
 import type { StudentRow, ClassRow } from "../../types";
 import LoadingState, { EmptyState, ErrorState } from "../../components/LoadingState";
 import { ApiRequestError } from "../../api/client";
+import { Modal } from "../../components/ui/Modal";
+import { Button } from "../../components/ui/Button";
 
 export default function AdminStudents() {
   const [students, setStudents] = useState<StudentRow[] | null>(null);
@@ -13,6 +15,12 @@ export default function AdminStudents() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ username: "", password: "", student_code: "", full_name: "", class_id: "" });
   const [submitting, setSubmitting] = useState(false);
+
+  // Edit Modal State
+  const [editTarget, setEditTarget] = useState<StudentRow | null>(null);
+  const [editForm, setEditForm] = useState({ full_name: "", class_id: "" });
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   async function load() {
     try {
@@ -50,6 +58,34 @@ export default function AdminStudents() {
       setError(e instanceof ApiRequestError ? e.message : "Failed to create student.");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  function openEdit(s: StudentRow) {
+    setEditTarget(s);
+    setEditForm({
+      full_name: s.full_name,
+      class_id: s.class_id ? String(s.class_id) : "",
+    });
+    setEditError(null);
+  }
+
+  async function handleUpdate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editTarget) return;
+    setEditSubmitting(true);
+    setEditError(null);
+    try {
+      await updateStudent(editTarget.id, {
+        full_name: editForm.full_name.trim(),
+        class_id: editForm.class_id ? Number(editForm.class_id) : undefined,
+      });
+      setEditTarget(null);
+      load();
+    } catch (e: any) {
+      setEditError(e instanceof ApiRequestError ? e.message : "Gagal memperbarui data siswa.");
+    } finally {
+      setEditSubmitting(false);
     }
   }
 
@@ -139,23 +175,32 @@ export default function AdminStudents() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    {s.is_active ? (
+                    <div className="flex items-center justify-end gap-1">
                       <button
-                        onClick={() => handleDeactivate(s.id)}
-                        title="Nonaktifkan Akun"
-                        className="text-slate-500 hover:text-rose-400 p-1"
+                        onClick={() => openEdit(s)}
+                        title="Edit Data Siswa"
+                        className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors"
                       >
-                        <Trash2 size={16} />
+                        <Edit2 size={15} />
                       </button>
-                    ) : (
-                      <button
-                        onClick={() => handleReactivate(s.id)}
-                        title="Aktifkan Kembali Akun"
-                        className="text-slate-500 hover:text-emerald-400 p-1"
-                      >
-                        <CheckCircle2 size={16} />
-                      </button>
-                    )}
+                      {s.is_active ? (
+                        <button
+                          onClick={() => handleDeactivate(s.id)}
+                          title="Nonaktifkan Akun"
+                          className="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-rose-500/10 transition-colors"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleReactivate(s.id)}
+                          title="Aktifkan Kembali Akun"
+                          className="text-slate-500 hover:text-emerald-400 p-1.5 rounded-lg hover:bg-emerald-500/10 transition-colors"
+                        >
+                          <CheckCircle2 size={15} />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -163,6 +208,74 @@ export default function AdminStudents() {
           </table>
         </div>
       )}
+
+      {/* MODAL: EDIT DATA SISWA */}
+      <Modal
+        isOpen={Boolean(editTarget)}
+        onClose={() => setEditTarget(null)}
+        title="Edit Data Siswa"
+        description={`Mengubah data siswa ${editTarget?.full_name || ""} (${editTarget?.student_code || ""})`}
+        size="md"
+      >
+        <form onSubmit={handleUpdate} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              Nama Lengkap Siswa
+            </label>
+            <input
+              required
+              className="input-field"
+              value={editForm.full_name}
+              onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              Kelas Siswa
+            </label>
+            <select
+              className="input-field"
+              value={editForm.class_id}
+              onChange={(e) => setEditForm({ ...editForm, class_id: e.target.value })}
+            >
+              <option value="">-- Tanpa Kelas / Belum Ditentukan --</option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {editError && (
+            <div className="rounded-xl bg-rose-500/10 border border-rose-500/30 p-3 text-xs text-rose-300 flex items-center gap-2">
+              <span>{editError}</span>
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              fullWidth
+              onClick={() => setEditTarget(null)}
+            >
+              Batal
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+              fullWidth
+              isLoading={editSubmitting}
+            >
+              Simpan Perubahan
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

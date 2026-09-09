@@ -42,6 +42,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         "token_type": "bearer",
         "role": user.role.value,
         "full_name": _profile_name(user),
+        "user_id": user.id,
     })
 
 

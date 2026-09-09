@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -458,3 +458,152 @@ def review_attendance_photo(
             "photo_rejection_reason": record.photo_rejection_reason,
         }
     )
+
+
+# ============================================================
+# TEACHER - STUDENTS ROSTER
+# ============================================================
+
+@router.get("/students")
+def list_teacher_students(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("teacher")),
+    class_id: Optional[int] = Query(default=None),
+    search: Optional[str] = Query(default=None),
+):
+    teacher = _get_teacher(user)
+    
+    # Query students
+    q = db.query(Student).filter(Student.is_active == True)
+    if class_id:
+        q = q.filter(Student.class_id == class_id)
+    if search and search.strip():
+        term = f"%{search.strip()}%"
+        q = q.filter((Student.full_name.ilike(term)) | (Student.student_code.ilike(term)))
+    
+    students = q.order_by(Student.full_name).all()
+    
+    # Pre-calculate attendance stats for these students under this teacher's sessions
+    session_ids = [s.id for s in db.query(AttendanceSession.id).filter(
+        AttendanceSession.teacher_id == teacher.id,
+        AttendanceSession.is_deleted != True,
+    ).all()]
+    
+    res = []
+    for s in students:
+        if session_ids:
+            records = db.query(AttendanceRecord).filter(
+                AttendanceRecord.student_id == s.id,
+                AttendanceRecord.session_id.in_(session_ids),
+            ).all()
+            total = len(records)
+            present = sum(1 for r in records if r.status == AttendanceStatus.present)
+            late = sum(1 for r in records if r.status == AttendanceStatus.late)
+            rate = round(((present + late) / total) * 100) if total > 0 else 100
+        else:
+            total = 0
+            present = 0
+            late = 0
+            rate = 100
+
+        res.append({
+            "id": s.id,
+            "student_code": s.student_code,
+            "full_name": s.full_name,
+            "class_id": s.class_id,
+            "class_name": s.school_class.name if s.school_class else None,
+            "total_attended": total,
+            "present_count": present,
+            "late_count": late,
+            "attendance_rate": rate,
+        })
+
+    return ok({"students": res})
+
+
+# ============================================================
+# TEACHER - ANALYTICS
+# ============================================================
+
+@router.get("/analytics")
+def get_teacher_analytics(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_role("teacher")),
+):
+    teacher = _get_teacher(user)
+
+    sessions = db.query(AttendanceSession).filter(
+        AttendanceSession.teacher_id == teacher.id,
+        AttendanceSession.is_deleted != True,
+    ).all()
+
+    total_sessions = len(sessions)
+    session_ids = [s.id for s in sessions]
+
+    if not session_ids:
+        return ok({
+            "total_sessions": 0,
+            "total_records": 0,
+            "present_count": 0,
+            "late_count": 0,
+            "excused_count": 0,
+            "sick_count": 0,
+            "absent_count": 0,
+            "attendance_rate": 100,
+            "pending_photos": 0,
+            "class_breakdown": [],
+        })
+
+    records = db.query(AttendanceRecord).filter(
+        AttendanceRecord.session_id.in_(session_ids)
+    ).all()
+
+    present_count = sum(1 for r in records if r.status == AttendanceStatus.present)
+    late_count = sum(1 for r in records if r.status == AttendanceStatus.late)
+    excused_count = sum(1 for r in records if r.status == AttendanceStatus.excused)
+    sick_count = sum(1 for r in records if r.status == AttendanceStatus.sick)
+    absent_count = sum(1 for r in records if r.status == AttendanceStatus.absent)
+    pending_photos = sum(1 for r in records if r.photo_status == PhotoStatus.pending)
+
+    total_records = len(records)
+    attendance_rate = round(((present_count + late_count) / total_records) * 100) if total_records > 0 else 100
+
+    # Group by class
+    class_map = {}
+    for s in sessions:
+        cid = s.class_id
+        cname = s.school_class.name if s.school_class else "Kelas Lain"
+        if cid not in class_map:
+            class_map[cid] = {"class_id": cid, "class_name": cname, "sessions": 0, "attendees": 0, "total_records": 0}
+        class_map[cid]["sessions"] += 1
+
+    for r in records:
+        cid = r.session.class_id if r.session else None
+        if cid in class_map:
+            class_map[cid]["total_records"] += 1
+            if r.status in (AttendanceStatus.present, AttendanceStatus.late):
+                class_map[cid]["attendees"] += 1
+
+    class_breakdown = []
+    for c in class_map.values():
+        rec_count = c["total_records"]
+        att_rate = round((c["attendees"] / rec_count) * 100) if rec_count > 0 else 100
+        class_breakdown.append({
+            "class_id": c["class_id"],
+            "class_name": c["class_name"],
+            "sessions_count": c["sessions"],
+            "attendance_rate": att_rate,
+        })
+
+    return ok({
+        "total_sessions": total_sessions,
+        "total_records": total_records,
+        "present_count": present_count,
+        "late_count": late_count,
+        "excused_count": excused_count,
+        "sick_count": sick_count,
+        "absent_count": absent_count,
+        "attendance_rate": attendance_rate,
+        "pending_photos": pending_photos,
+        "class_breakdown": class_breakdown,
+    })

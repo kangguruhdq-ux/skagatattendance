@@ -69,6 +69,34 @@ def ensure_schema():
             if "is_active" not in existing_subj_cols:
                 conn.exec_driver_sql("ALTER TABLE subjects ADD COLUMN is_active BOOLEAN DEFAULT 1;")
 
+            # users
+            res_users = conn.exec_driver_sql("PRAGMA table_info(users);")
+            existing_user_cols = {row[1] for row in res_users.fetchall()}
+            if "avatar_path" not in existing_user_cols:
+                conn.exec_driver_sql("ALTER TABLE users ADD COLUMN avatar_path VARCHAR(255);")
+            if "email" not in existing_user_cols:
+                conn.exec_driver_sql("ALTER TABLE users ADD COLUMN email VARCHAR(128);")
+
+            # Initialize default system settings if missing
+            default_settings = [
+                ("school_name", "SMK Negeri 3 Yogyakarta", "Nama resmi sekolah"),
+                ("school_latitude", "-7.777500", "Koordinat lintang pusat sekolah SMKN 3 Yogyakarta"),
+                ("school_longitude", "110.365900", "Koordinat bujur pusat sekolah SMKN 3 Yogyakarta"),
+                ("geofence_radius_meters", "150.0", "Radius batas toleransi presensi dalam meter"),
+                ("geofence_enabled", "true", "Status aktif validasi geofence GPS"),
+                ("school_address", "Jl. R.W. Monginsidi No.2, Cokrodiningratan, Kec. Jetis, Kota Yogyakarta", "Alamat lengkap sekolah"),
+                ("attendance_late_threshold_minutes", "10", "Toleransi keterlambatan dalam menit"),
+                ("allow_student_correction", "true", "Izinkan siswa mengajukan koreksi presensi"),
+            ]
+
+            for k, val, desc in default_settings:
+                row = conn.exec_driver_sql("SELECT key FROM system_settings WHERE key = ?", (k,)).fetchone()
+                if not row:
+                    conn.exec_driver_sql(
+                        "INSERT INTO system_settings (key, value, description, updated_at) VALUES (?, ?, ?, datetime('now'));",
+                        (k, val, desc)
+                    )
+
             conn.commit()
         except Exception:
             pass

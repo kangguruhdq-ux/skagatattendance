@@ -5,6 +5,7 @@ export interface LoginResult {
   token_type: string;
   role: "student" | "teacher" | "admin";
   full_name: string;
+  user_id?: number;
 }
 
 export function login(username: string, password: string) {

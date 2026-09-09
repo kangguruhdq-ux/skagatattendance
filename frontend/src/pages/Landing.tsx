@@ -25,25 +25,25 @@ export default function Landing() {
         </div>
       </header>
 
-      <section className="max-w-4xl mx-auto text-center px-6 pt-16 pb-20">
+      <section className="max-w-4xl mx-auto text-center px-4 sm:px-6 pt-12 sm:pt-16 pb-16 sm:pb-20 animate-fadeInUp">
         <span className="badge bg-brand-500/10 text-brand-600 dark:text-brand-300 border border-brand-500/30 mb-5">
           Educational Demo Project
         </span>
-        <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+        <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white">
           SKAGATA <span className="text-brand-600 dark:text-brand-400">ATTENDANCE</span>
         </h1>
-        <p className="mt-4 text-lg text-slate-600 dark:text-slate-400">Smart Attendance System for School</p>
-        <div className="mt-8 flex items-center justify-center gap-3">
-          <Link to="/login" className="btn-primary">
+        <p className="mt-3 sm:mt-4 text-base sm:text-lg text-slate-600 dark:text-slate-400">Smart Attendance System for School</p>
+        <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Link to="/login" className="btn-primary w-full sm:w-auto">
             Login <ArrowRight size={16} />
           </Link>
-          <Link to="/login" className="btn-secondary">
+          <Link to="/login" className="btn-secondary w-full sm:w-auto">
             View Demo
           </Link>
         </div>
       </section>
 
-      <section className="max-w-6xl mx-auto px-6 pb-24 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-20 sm:pb-24 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 stagger-children">
         {FEATURES.map((f) => (
           <div key={f.title} className="glass-card p-5">
             <div className="p-2.5 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 w-fit mb-4">

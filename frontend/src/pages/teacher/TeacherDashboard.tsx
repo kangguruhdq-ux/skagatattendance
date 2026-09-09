@@ -95,8 +95,9 @@ export default function TeacherDashboard() {
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       {/* Top Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-900/40 via-slate-900/80 to-slate-950 border border-brand-500/20 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-900/40 via-slate-900/80 to-slate-950 border border-brand-500/20 p-5 sm:p-8 shadow-2xl backdrop-blur-xl animate-fadeIn">
+        <div className="absolute top-0 right-0 w-48 h-48 sm:w-80 sm:h-80 bg-brand-500/10 rounded-full blur-3xl pointer-events-none animate-float" />
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-500/15 border border-brand-500/30 text-brand-300 text-xs font-semibold mb-2">
               <Sparkles size={13} /> Dashboard Guru Pengampu
@@ -104,13 +105,13 @@ export default function TeacherDashboard() {
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
               Selamat Mengajar, {data.full_name}!
             </h1>
-            <p className="text-sm text-slate-300 mt-1">
+            <p className="text-xs sm:text-sm text-slate-300 mt-1">
               Pantau kehadiran kelas dan jalankan sesi presensi aktif Anda hari ini.
             </p>
           </div>
 
-          <Link to="/teacher/sessions/new" className="shrink-0">
-            <Button variant="primary" size="lg" leftIcon={<Plus size={20} />}>
+          <Link to="/teacher/sessions/new" className="shrink-0 w-full sm:w-auto">
+            <Button variant="primary" size="lg" fullWidth leftIcon={<Plus size={20} />}>
               Buat Sesi Baru
             </Button>
           </Link>
@@ -118,8 +119,8 @@ export default function TeacherDashboard() {
       </div>
 
       {/* Summary Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 stagger-children">
+        <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-4 sm:p-5 transition-transform hover:-translate-y-1 hover:border-brand-500/30">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-400">Total Sesi Hari Ini</span>
             <div className="p-2.5 rounded-xl bg-brand-500/10 text-brand-400">
@@ -130,7 +131,7 @@ export default function TeacherDashboard() {
           <p className="text-xs text-slate-400 mt-0.5">Sesi terjadwal</p>
         </div>
 
-        <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-5">
+        <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-4 sm:p-5 transition-transform hover:-translate-y-1 hover:border-emerald-500/30">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-400">Sesi Aktif</span>
             <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400">
@@ -145,7 +146,7 @@ export default function TeacherDashboard() {
           </p>
         </div>
 
-        <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-5">
+        <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-4 sm:p-5 transition-transform hover:-translate-y-1 hover:border-sky-500/30">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-400">Total Siswa Diajar</span>
             <div className="p-2.5 rounded-xl bg-sky-500/10 text-sky-400">
@@ -158,7 +159,7 @@ export default function TeacherDashboard() {
           <p className="text-xs text-slate-400 mt-0.5">Siswa terdaftar</p>
         </div>
 
-        <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-5">
+        <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-4 sm:p-5 transition-transform hover:-translate-y-1 hover:border-amber-500/30">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-400">Kehadiran Hari Ini</span>
             <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400">
@@ -221,11 +222,12 @@ export default function TeacherDashboard() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  <Link to={`/teacher/sessions/${s.id}`}>
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0">
+                  <Link to={`/teacher/sessions/${s.id}`} className="flex-1 sm:flex-initial">
                     <Button
                       variant={s.status === "active" ? "primary" : "secondary"}
                       size="sm"
+                      fullWidth
                       rightIcon={<ArrowRight size={14} />}
                     >
                       {s.status === "active" ? "Buka Live Monitor" : "Lihat Rekap"}
